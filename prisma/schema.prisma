@@ -1,0 +1,147 @@
+// Prisma schema — https://pris.ly/d/prisma-schema
+//
+// Local dev uses SQLite; production uses PostgreSQL.
+// To switch, change `provider` below to "postgresql", set DATABASE_URL to a
+// Postgres connection string, and swap the driver adapter in src/lib/db.ts
+// (@prisma/adapter-better-sqlite3 -> @prisma/adapter-pg).
+// Note: SQLite has no native enums, so status-like fields are Strings with
+// their allowed values documented inline and typed in src/lib/db.ts.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ---------- Auth.js (NextAuth) models ----------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts         Account[]
+  sessions         Session[]
+  platformAccounts PlatformAccount[]
+  savedModels      SavedModel[]
+  syncJobs         SyncJob[]
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// ---------- Aggregator models ----------
+
+model PlatformAccount {
+  id               String    @id @default(cuid())
+  userId           String
+  platformName     String // "thingiverse" | "printables" | "makerworld"
+  encryptedCookies String // AES-256-GCM ciphertext, base64-encoded
+  lastSyncedAt     DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, platformName])
+}
+
+model SavedModel {
+  id                 String   @id @default(cuid())
+  userId             String
+  externalId         String // the model's id on the source platform
+  title              String
+  externalUrl        String
+  thumbnailUrl       String?
+  sourcePlatform     String // "thingiverse" | "printables" | "makerworld"
+  originalLikesCount Int      @default(0)
+  collectionName     String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sourcePlatform, externalId])
+  @@index([userId, collectionName])
+}
+
+// Models favorited locally from search results (distinct from SavedModel,
+// which holds likes imported from linked platform accounts). Deliberately
+// not tied to a user: this is a local, installation-wide favorites database.
+model FavoriteModel {
+  id             String   @id @default(cuid())
+  externalId     String // the model's id on the source platform
+  title          String
+  author         String
+  externalUrl    String
+  thumbnailUrl   String?
+  sourcePlatform String // SourcePlatform values (src/types/model.ts)
+  likesCount     Int      @default(0)
+  license        String?
+  category       String? // ModelCategory values (src/types/model.ts); null = uncategorized
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([sourcePlatform, externalId])
+  @@index([category])
+}
+
+model SyncJob {
+  id            String    @id @default(cuid())
+  userId        String
+  platformName  String
+  status        String    @default("PENDING") // PENDING | RUNNING | COMPLETED | FAILED
+  totalImported Int       @default(0)
+  error         String?
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}

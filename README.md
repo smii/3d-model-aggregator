@@ -1,0 +1,38 @@
+> # Intro (#noAI):
+> 
+> I built this self-hosted service because I wanted to rely less on online services and subscription-based platforms that lack a self-hosted option where you remain in control. Again, this was the case with an online service that offered aggregated 3D model searching, which worked well but limited API usage and had no option for self-hosting. I used Claude in very simple steps to generate a self-hosted 3D model aggregator with local saves to see how fast I could build a tool offering full data control. In its current state, it is minimal but functional for local use! Included are also the MD files, skills and agents which I have used to build this concept. 
+
+
+# 3D Model Aggregator
+
+Search 3D printable models across multiple platforms (Printables, Thingiverse, MakerWorld, GrabCAD, Cults3D, MyMiniFactory) from a single dashboard. Filter by category, save results to a local favorites database organized by category, optionally hypothetically sign in with Google to import your likes and collections from linked platform accounts. Reason why I'm saying hypothetically is because I haven't reviewed/tested the code yet that Claude generated for this feature, and for now local favorites is already sufficient for now ;). That said, hopefully this self-hosted aggregator will motivate others to test/and or extend it's features!
+
+Built with Next.js 15, TypeScript, Tailwind CSS, and Prisma (SQLite in dev).
+
+## ⚠️ No security
+
+This is a personal, self-hosted tool intended to run locally. The local favorites database is deliberately **unauthenticated and shared by anyone who can reach the app** — there are no accounts, permissions, or per-user separation for favorites. Do not expose this app to the public internet as-is. 
+
+
+```bash
+npm install
+cp .env.example .env.local   # fill in what you need (all optional except for sync)
+npx prisma migrate dev
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). Search and favorites work out of the box; some platforms need free API keys (see `.env.example`), and account sync requires Google OAuth credentials.
+
+## Disclaimer
+
+Not affiliated with or endorsed by any of the platforms it searches. Some adapters use undocumented endpoints — use at your own risk and respect each platform's terms of service.
+
+## License
+ 
+Dual-licensed:
+ 
+- **[GNU AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html)** (default, see [LICENSE](LICENSE)) — free to use, share, and modify, including commercially. If you distribute a modified version or run one as a network service for others, you must make your modified source available under this same license.
+- **Commercial license** — if you want to use this software in a closed-source product or service without the AGPL's source-sharing obligations, contact the author (mj.lopes@gmail.com).
+
+Copyright (C) 2026 smii
+
