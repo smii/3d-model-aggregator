@@ -1,0 +1,44 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Set to "false" for a ~500 MB smaller image if you don't need the
+        # Playwright-based "Account Sync" feature.
+        WITH_PLAYWRIGHT: "true"
+    image: 3d-model-aggregator:latest
+    container_name: 3d-model-aggregator
+    restart: unless-stopped
+    ports:
+      # Bound to localhost on purpose — the app has no authentication.
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      # SQLite file lives on the named volume, not in the image.
+      DATABASE_URL: "file:/data/app.db"
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      # Needed when reaching the app via anything other than localhost:3000.
+      AUTH_TRUST_HOST: "true"
+    volumes:
+      - aggregator-data:/data
+    # Chromium needs a bit of shared memory when the sync scrapers run.
+    shm_size: "1gb"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+volumes:
+  aggregator-data:
