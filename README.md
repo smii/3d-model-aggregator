@@ -25,6 +25,12 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). Search and favorites work out of the box; some platforms need free API keys (see `.env.example`), and account sync requires Google OAuth credentials.
 
+## 📱 Mobile & Android
+
+Responsive UI (bottom nav, collapsible filters) and installable as a PWA — open it in Chrome on Android and "Install app" for a standalone, full-screen home screen icon. Requires HTTPS or `localhost` (service workers won't register over a plain `http://` LAN address, so put it behind a reverse proxy with TLS for real use; `adb reverse tcp:3000 tcp:3000` works for quick local testing).
+
+Account sync is desktop-only for now — and same disclaimer as above, that feature is still untested/hypothetical either way.
+
 ## Disclaimer
 
 Not affiliated with or endorsed by any of the platforms it searches. Some adapters use undocumented endpoints — use at your own risk and respect each platform's terms of service.

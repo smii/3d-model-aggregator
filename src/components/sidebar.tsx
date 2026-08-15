@@ -2,14 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Heart, RefreshCw, Settings } from "lucide-react";
-
-const navItems = [
-  { href: "/", label: "Search", icon: Search },
-  { href: "/favorites", label: "Favorites", icon: Heart },
-  { href: "/sync", label: "Account Sync", icon: RefreshCw },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
+import { navItems } from "@/lib/nav-items";
 
 export function Sidebar() {
   const pathname = usePathname();
