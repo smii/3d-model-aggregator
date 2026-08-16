@@ -1,4 +1,4 @@
-const CACHE_NAME = "3dma-shell-v1";
+const CACHE_NAME = "3dma-shell-v2";
 const SHELL_URLS = ["/manifest.json"];
 
 self.addEventListener("install", (event) => {
@@ -35,6 +35,17 @@ self.addEventListener("fetch", (event) => {
   // Never touch account-sync or auth requests — leave them to the network
   // exactly as the browser would handle them without a service worker.
   if (url.pathname.startsWith("/api/sync") || url.pathname.startsWith("/api/auth")) {
+    return;
+  }
+
+  // Never cache pages that render session-specific PII (name, email, synced
+  // account state) — caching them would let a later user of the same
+  // device/browser profile read a previous user's data from Cache Storage.
+  if (
+    url.pathname.startsWith("/settings") ||
+    url.pathname.startsWith("/sync") ||
+    url.pathname.startsWith("/favorites/likes")
+  ) {
     return;
   }
 
