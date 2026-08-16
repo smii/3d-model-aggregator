@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { platformBadges } from "@/components/ModelCard";
 import { categoryOptions, platformOptions } from "@/components/SidebarFilters";
+import { FilterDrawer } from "@/components/FilterDrawer";
 import type { ModelCategory, SourcePlatform } from "@/types/model";
 
 export interface FavoriteListItem {
@@ -202,6 +203,7 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
       </div>
 
       <div className="flex flex-col gap-6 lg:flex-row">
+        <FilterDrawer>
         <aside className="flex w-full shrink-0 flex-col gap-6 lg:w-60">
           <section className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
             <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
@@ -258,6 +260,7 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
             </fieldset>
           </section>
         </aside>
+        </FilterDrawer>
 
         {filtered.length === 0 ? (
           <div className="flex flex-1 flex-col items-center gap-3 self-start rounded-xl border border-dashed border-zinc-800 py-20 text-center">

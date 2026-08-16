@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { SidebarFilters, platformOptions } from "@/components/SidebarFilters";
+import { FilterDrawer } from "@/components/FilterDrawer";
 import { ModelGrid } from "@/components/ModelGrid";
 import type {
   ModelCategory,
@@ -235,14 +236,16 @@ export default function Home() {
       <SearchBar value={query} onChange={setQuery} onSubmit={runSearch} />
 
       <div className="flex flex-col gap-6 lg:flex-row">
-        <SidebarFilters
-          selectedPlatforms={selected}
-          onTogglePlatform={togglePlatform}
-          sort={sort}
-          onSortChange={setSort}
-          category={category}
-          onCategoryChange={changeCategory}
-        />
+        <FilterDrawer>
+          <SidebarFilters
+            selectedPlatforms={selected}
+            onTogglePlatform={togglePlatform}
+            sort={sort}
+            onSortChange={setSort}
+            category={category}
+            onCategoryChange={changeCategory}
+          />
+        </FilterDrawer>
 
         <div className="flex flex-1 flex-col gap-4">
           {saveNotice && (
