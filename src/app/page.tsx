@@ -89,6 +89,7 @@ function SearchPage() {
   const [saveSearchOpen, setSaveSearchOpen] = useState(false);
   const [saveSearchNotice, setSaveSearchNotice] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
   const seededFromUrl = useRef(false);
 
@@ -248,6 +249,17 @@ function SearchPage() {
       }
       return next;
     });
+  }
+
+  // Scrolls to the top of the results grid (just below the fixed header)
+  // rather than all the way up to the search bar, so paging doesn't force
+  // scrolling back down past filters/search to see the next page.
+  function scrollToResults() {
+    const el = resultsRef.current;
+    if (!el) return;
+    const headerOffset = 72;
+    const top = el.getBoundingClientRect().top + window.scrollY - headerOffset;
+    window.scrollTo({ top, behavior: "smooth" });
   }
 
   async function runSearch(
@@ -485,7 +497,7 @@ function SearchPage() {
           />
         </FilterDrawer>
 
-        <div className="flex flex-1 flex-col gap-4">
+        <div ref={resultsRef} className="flex flex-1 flex-col gap-4">
           {saveNotice && (
             <div className="flex items-start gap-2 rounded-xl border border-amber-900/50 bg-amber-950/30 px-4 py-3 text-sm text-amber-300">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" />
@@ -560,7 +572,7 @@ function SearchPage() {
                   hasNext={search.results.length > 0}
                   onNavigate={(target) => {
                     runSearch(target);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
+                    scrollToResults();
                   }}
                 />
               </>
@@ -580,7 +592,7 @@ function SearchPage() {
               hasNext={false}
               onNavigate={(target) => {
                 runSearch(target);
-                window.scrollTo({ top: 0, behavior: "smooth" });
+                scrollToResults();
               }}
             />
           )}
