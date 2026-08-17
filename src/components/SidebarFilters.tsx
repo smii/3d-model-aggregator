@@ -21,6 +21,7 @@ export const platformOptions: ReadonlyArray<{
 const sortOptions: ReadonlyArray<{ id: SortOption; label: string }> = [
   { id: "newest", label: "Newest" },
   { id: "most_liked", label: "Most Liked" },
+  { id: "most_downloaded", label: "Most Downloaded" },
 ];
 
 export const categoryOptions: ReadonlyArray<{
@@ -183,6 +184,12 @@ export function SidebarFilters({
             );
           })}
         </fieldset>
+        {sort === "most_downloaded" && (
+          <p className="mt-3 text-xs leading-relaxed text-zinc-600">
+            Thingiverse and MyMiniFactory don&apos;t report download counts in
+            search results, so their results sort to the bottom.
+          </p>
+        )}
       </section>
     </aside>
   );

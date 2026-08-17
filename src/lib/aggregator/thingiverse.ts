@@ -30,6 +30,10 @@ function toUnified(hit: ThingiverseHit): UnifiedModelResult {
     thumbnailUrl: hit.thumbnail ?? hit.preview_image ?? '',
     externalUrl: hit.public_url ?? `https://www.thingiverse.com/thing:${hit.id}`,
     likesCount: hit.like_count ?? 0,
+    // Thingiverse's search hits don't include download_count (only the
+    // per-item detail endpoint does), and fetching that per result would
+    // mean N extra requests per search. Left at 0.
+    downloadsCount: 0,
     tags: hit.tags?.map((tag) => tag.name) ?? [],
     license: hit.license ?? 'Unknown',
     isLikedLocally: false,

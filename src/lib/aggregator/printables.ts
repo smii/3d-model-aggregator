@@ -31,6 +31,7 @@ const SEARCH_QUERY = /* GraphQL */ `
         name
         slug
         likesCount
+        downloadCount
         image {
           filePath
         }
@@ -53,6 +54,7 @@ interface PrintablesItem {
   name: string;
   slug: string;
   likesCount: number | null;
+  downloadCount: number | null;
   image: { filePath: string | null } | null;
   user: { publicUsername: string | null } | null;
   license: { name: string | null } | null;
@@ -73,6 +75,7 @@ function toUnified(item: PrintablesItem): UnifiedModelResult {
     thumbnailUrl: item.image?.filePath ? `${MEDIA_BASE}/${item.image.filePath}` : '',
     externalUrl: `https://www.printables.com/model/${item.id}-${item.slug}`,
     likesCount: item.likesCount ?? 0,
+    downloadsCount: item.downloadCount ?? 0,
     tags: item.tags?.map((tag) => tag.name) ?? [],
     license: item.license?.name ?? 'Unknown',
     isLikedLocally: false,

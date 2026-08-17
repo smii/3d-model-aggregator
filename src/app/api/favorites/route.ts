@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { isModelCategory, type ModelCategory } from '@/types/model';
+import { MAX_CATEGORY_LENGTH } from '@/lib/category-constants';
 
 // Local, installation-wide favorites database — deliberately unauthenticated.
 
@@ -14,12 +14,12 @@ export interface FavoriteItem {
   sourcePlatform: string;
   likesCount: number;
   license: string | null;
-  category: ModelCategory | null;
+  // Freeform: either one of the platform-native category ids (src/types/model.ts,
+  // reused as a suggestion) or a user-created custom category string.
+  category: string | null;
   createdAt: string;
 }
 
-// Prisma stores category as a plain String (SQLite has no enums); values are
-// validated on write, so the cast back to ModelCategory on read is safe.
 function toItem(favorite: {
   id: string;
   externalId: string;
@@ -43,15 +43,21 @@ function toItem(favorite: {
     sourcePlatform: favorite.sourcePlatform,
     likesCount: favorite.likesCount,
     license: favorite.license,
-    category: favorite.category as ModelCategory | null,
+    category: favorite.category,
     createdAt: favorite.createdAt.toISOString(),
   };
 }
 
-function parseCategory(value: unknown): ModelCategory | null | undefined {
+// Categories are freeform (either a platform-native id from types/model.ts,
+// reused only as a suggestion, or a custom string the user typed in) — just
+// trim and bound the length, don't restrict to a fixed set.
+function parseCategory(value: unknown): string | null | undefined {
   if (value === null || value === undefined) return null;
-  if (typeof value === 'string' && isModelCategory(value)) return value;
-  return undefined; // invalid
+  if (typeof value !== 'string') return undefined; // invalid
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  if (trimmed.length > MAX_CATEGORY_LENGTH) return undefined; // invalid
+  return trimmed;
 }
 
 export async function GET() {

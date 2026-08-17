@@ -11,8 +11,10 @@ import {
 } from "lucide-react";
 import { platformBadges } from "@/components/ModelCard";
 import { categoryOptions, platformOptions } from "@/components/SidebarFilters";
+import { CategoryCombobox } from "@/components/CategoryCombobox";
 import { FilterDrawer } from "@/components/FilterDrawer";
-import type { ModelCategory, SourcePlatform } from "@/types/model";
+import { getFavoriteCategoryOptions } from "@/lib/favorite-categories";
+import type { SourcePlatform } from "@/types/model";
 
 export interface FavoriteListItem {
   id: string;
@@ -23,15 +25,13 @@ export interface FavoriteListItem {
   thumbnailUrl: string | null;
   sourcePlatform: string;
   likesCount: number;
-  category: ModelCategory | null;
+  // A platform-native category id (src/types/model.ts) or a user-created
+  // custom category string.
+  category: string | null;
 }
 
-// Sidebar radio value: "all" | "uncategorized" | ModelCategory
-type CategoryFilter = "all" | "uncategorized" | ModelCategory;
-
-const categoryLabels = new Map<string, string>(
-  categoryOptions.map(({ id, label }) => [id, label])
-);
+// Sidebar radio value: "all" | "uncategorized" | a category value
+type CategoryFilter = "all" | "uncategorized" | string;
 
 function badgeFor(platform: string) {
   return (
@@ -69,7 +69,8 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
   }, [items]);
 
   // Categories present in the user's favorites, with counts. Shown in the
-  // sidebar in the global category order; "uncategorized" appears last.
+  // sidebar in the global category order, then any custom categories
+  // alphabetically, with "uncategorized" last.
   const categories = useMemo(() => {
     const counts = new Map<CategoryFilter, number>();
     for (const item of items) {
@@ -77,9 +78,19 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
     const ordered: { id: CategoryFilter; label: string; count: number }[] = [];
+    const seen = new Set<string>();
     for (const { id, label } of categoryOptions) {
       const count = counts.get(id);
-      if (count) ordered.push({ id, label, count });
+      if (count) {
+        ordered.push({ id, label, count });
+        seen.add(id);
+      }
+    }
+    const customs = [...counts.keys()]
+      .filter((key) => key !== "uncategorized" && !seen.has(key))
+      .sort((a, b) => a.localeCompare(b));
+    for (const custom of customs) {
+      ordered.push({ id: custom, label: custom, count: counts.get(custom)! });
     }
     const uncategorized = counts.get("uncategorized");
     if (uncategorized) {
@@ -87,6 +98,13 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
     }
     return ordered;
   }, [items]);
+
+  // Suggestion list for the per-card category picker: defaults + every
+  // custom category already in use across favorites.
+  const categoryPickerOptions = useMemo(
+    () => getFavoriteCategoryOptions(items.map((item) => item.category)),
+    [items]
+  );
 
   // null means "no filter applied yet" — every platform selected.
   const selectedPlatforms = useMemo(
@@ -104,7 +122,7 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
     setSelected(next);
   }
 
-  async function changeCategory(item: FavoriteListItem, next: ModelCategory | null) {
+  async function changeCategory(item: FavoriteListItem, next: string | null) {
     const previous = item.category;
     setItems((prev) =>
       prev.map((f) => (f.id === item.id ? { ...f, category: next } : f))
@@ -275,6 +293,7 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
               <FavoriteCard
                 key={item.id}
                 item={item}
+                categoryOptions={categoryPickerOptions}
                 onChangeCategory={changeCategory}
                 onRemove={removeFavorite}
               />
@@ -318,11 +337,13 @@ function CategoryRadio({
 
 function FavoriteCard({
   item,
+  categoryOptions: pickerOptions,
   onChangeCategory,
   onRemove,
 }: {
   item: FavoriteListItem;
-  onChangeCategory: (item: FavoriteListItem, next: ModelCategory | null) => void;
+  categoryOptions: ReadonlyArray<{ value: string; label: string }>;
+  onChangeCategory: (item: FavoriteListItem, next: string | null) => void;
   onRemove: (item: FavoriteListItem) => void;
 }) {
   const badge = badgeFor(item.sourcePlatform);
@@ -384,24 +405,12 @@ function FavoriteCard({
           </a>
         </div>
 
-        <select
-          value={item.category ?? ""}
-          onChange={(e) =>
-            onChangeCategory(
-              item,
-              e.target.value === "" ? null : (e.target.value as ModelCategory)
-            )
-          }
-          aria-label={`Category for ${item.title}`}
-          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1.5 text-xs text-zinc-300 focus:border-indigo-500 focus:outline-none"
-        >
-          <option value="">Uncategorized</option>
-          {categoryOptions.map(({ id }) => (
-            <option key={id} value={id}>
-              {categoryLabels.get(id)}
-            </option>
-          ))}
-        </select>
+        <CategoryCombobox
+          value={item.category}
+          options={pickerOptions}
+          onChange={(next) => onChangeCategory(item, next)}
+          ariaLabel={`Category for ${item.title}`}
+        />
       </div>
     </article>
   );

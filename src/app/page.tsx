@@ -12,6 +12,8 @@ import { SearchBar } from "@/components/SearchBar";
 import { SidebarFilters, platformOptions } from "@/components/SidebarFilters";
 import { FilterDrawer } from "@/components/FilterDrawer";
 import { ModelGrid } from "@/components/ModelGrid";
+import { FavoriteCategoryModal } from "@/components/FavoriteCategoryModal";
+import { getFavoriteCategoryOptions } from "@/lib/favorite-categories";
 import type {
   ModelCategory,
   SortOption,
@@ -52,6 +54,17 @@ export default function Home() {
   // signed in).
   const [savedKeys, setSavedKeys] = useState<ReadonlySet<string>>(new Set());
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
+  // Every category already used across the local favorites database, kept
+  // up to date so the "pick a category" modal can suggest previously-used
+  // custom categories, not just the 10 defaults.
+  const [knownCategories, setKnownCategories] = useState<
+    ReadonlyArray<string | null>
+  >([]);
+  // The favorite awaiting a category choice right after being saved.
+  const [pendingFavorite, setPendingFavorite] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -63,19 +76,50 @@ export default function Home() {
         });
         if (!response.ok) return;
         const data = (await response.json()) as {
-          favorites: { sourcePlatform: string; externalId: string }[];
+          favorites: {
+            sourcePlatform: string;
+            externalId: string;
+            category: string | null;
+          }[];
         };
         setSavedKeys(
           new Set(
             data.favorites.map((f) => `${f.sourcePlatform}:${f.externalId}`)
           )
         );
+        setKnownCategories(data.favorites.map((f) => f.category));
       } catch {
         // Non-fatal: hearts just start unsaved.
       }
     })();
     return () => controller.abort();
   }, []);
+
+  const categoryPickerOptions = useMemo(
+    () => getFavoriteCategoryOptions(knownCategories),
+    [knownCategories]
+  );
+
+  async function confirmFavoriteCategory(nextCategory: string | null) {
+    const pending = pendingFavorite;
+    setPendingFavorite(null);
+    if (!pending || !nextCategory) return;
+    try {
+      const response = await fetch("/api/favorites", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: pending.id, category: nextCategory }),
+      });
+      if (!response.ok) {
+        throw new Error(`Updating category failed (${response.status}).`);
+      }
+      setKnownCategories((prev) => [...prev, nextCategory]);
+    } catch (error) {
+      setSaveNotice(
+        error instanceof Error ? error.message : "Updating category failed."
+      );
+    }
+  }
 
   function togglePlatform(platform: SourcePlatform) {
     setSelected((prev) => {
@@ -189,6 +233,12 @@ export default function Home() {
       if (!response.ok && !(response.status === 404 && !adding)) {
         throw new Error(`Saving favorite failed (${response.status}).`);
       }
+      if (adding) {
+        const data = (await response.json()) as {
+          favorite: { id: string };
+        };
+        setPendingFavorite({ id: data.favorite.id, title: model.title });
+      }
       setSaveNotice(null);
     } catch (error) {
       setSavedKeys((prev) => {
@@ -218,6 +268,9 @@ export default function Home() {
       }));
     if (sort === "most_liked") {
       return [...filtered].sort((a, b) => b.likesCount - a.likesCount);
+    }
+    if (sort === "most_downloaded") {
+      return [...filtered].sort((a, b) => b.downloadsCount - a.downloadsCount);
     }
     return filtered;
   }, [search, selected, sort, savedKeys]);
@@ -335,6 +388,14 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      <FavoriteCategoryModal
+        open={pendingFavorite !== null}
+        modelTitle={pendingFavorite?.title ?? null}
+        options={categoryPickerOptions}
+        onConfirm={confirmFavoriteCategory}
+        onCancel={() => setPendingFavorite(null)}
+      />
     </div>
   );
 }

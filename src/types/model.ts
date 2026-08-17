@@ -8,7 +8,7 @@ export type SourcePlatform =
   | 'grabcad'
   | 'myminifactory';
 
-export type SortOption = 'newest' | 'most_liked';
+export type SortOption = 'newest' | 'most_liked' | 'most_downloaded';
 
 export const MODEL_CATEGORIES = [
   'toys_games',
@@ -37,6 +37,13 @@ export interface UnifiedModelResult {
   thumbnailUrl: string;
   externalUrl: string;
   likesCount: number;
+  /**
+   * Download count as reported by the source platform, 0 when the platform
+   * doesn't expose one in its search response (Thingiverse only has it on
+   * the per-item detail endpoint, not worth an N+1 call per result; MyMiniFactory
+   * is unverified — its docs are behind bot protection).
+   */
+  downloadsCount: number;
   tags: string[];
   license: string;
   isLikedLocally: boolean;

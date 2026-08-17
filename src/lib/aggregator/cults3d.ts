@@ -15,6 +15,7 @@ const SEARCH_QUERY = /* GraphQL */ `
         shortUrl
         illustrationImageUrl
         likesCount
+        downloadsCount
         creator {
           nick
         }
@@ -28,6 +29,7 @@ interface Cults3dCreation {
   shortUrl: string;
   illustrationImageUrl: string | null;
   likesCount: number | null;
+  downloadsCount: number | null;
   creator: { nick: string | null } | null;
 }
 
@@ -45,6 +47,7 @@ function toUnified(creation: Cults3dCreation): UnifiedModelResult {
     thumbnailUrl: creation.illustrationImageUrl ?? '',
     externalUrl: creation.shortUrl,
     likesCount: creation.likesCount ?? 0,
+    downloadsCount: creation.downloadsCount ?? 0,
     tags: [],
     license: 'Unknown',
     isLikedLocally: false,

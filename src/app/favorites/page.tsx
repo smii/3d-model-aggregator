@@ -6,7 +6,6 @@ import {
   FavoritesBrowser,
   type FavoriteListItem,
 } from "@/components/FavoritesBrowser";
-import type { ModelCategory } from "@/types/model";
 import { HIDE_GMAIL_FEATURES } from "@/lib/config";
 
 export const metadata: Metadata = {
@@ -29,8 +28,7 @@ export default async function FavoritesPage() {
     thumbnailUrl: favorite.thumbnailUrl,
     sourcePlatform: favorite.sourcePlatform,
     likesCount: favorite.likesCount,
-    // Validated on write; SQLite stores it as a plain String.
-    category: favorite.category as ModelCategory | null,
+    category: favorite.category,
   }));
 
   return (

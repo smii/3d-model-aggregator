@@ -21,6 +21,7 @@ interface MakerWorldHit {
   cover: string | null;
   designCreator: { name: string | null } | null;
   likeCount: number | null;
+  downloadCount: number | null;
   tags: string[] | null;
   license: string | null;
 }
@@ -39,6 +40,7 @@ function toUnified(hit: MakerWorldHit): UnifiedModelResult {
     thumbnailUrl: hit.cover ?? '',
     externalUrl: `https://makerworld.com/en/models/${hit.id}`,
     likesCount: hit.likeCount ?? 0,
+    downloadsCount: hit.downloadCount ?? 0,
     tags: hit.tags ?? [],
     license: hit.license ?? 'Unknown',
     isLikedLocally: false,

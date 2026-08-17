@@ -43,6 +43,10 @@ function toUnified(item: MmfItem): UnifiedModelResult {
     thumbnailUrl: thumbnailOf(item),
     externalUrl: item.url ?? `https://www.myminifactory.com/object/3d-print-${item.id}`,
     likesCount: item.likes ?? 0,
+    // MyMiniFactory's search API docs are behind bot protection and this
+    // adapter has no API key configured to verify against live, so whether
+    // a download count is available here is unconfirmed. Left at 0.
+    downloadsCount: 0,
     tags: item.tags ?? [],
     license: 'Unknown',
     isLikedLocally: false,

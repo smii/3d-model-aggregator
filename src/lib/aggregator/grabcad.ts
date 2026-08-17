@@ -32,6 +32,7 @@ interface GrabCadModel {
   cached_slug: string;
   preview_image: string | null;
   likes_count: number | null;
+  downloads_count: number | null;
   author: { name: string | null } | null;
 }
 
@@ -49,6 +50,7 @@ function toUnified(model: GrabCadModel): UnifiedModelResult {
     thumbnailUrl: model.preview_image ?? '',
     externalUrl: `https://grabcad.com/library/${model.cached_slug}`,
     likesCount: model.likes_count ?? 0,
+    downloadsCount: model.downloads_count ?? 0,
     tags: [],
     license: 'Unknown',
     isLikedLocally: false,
