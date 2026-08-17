@@ -7,6 +7,8 @@
 
 Search 3D printable models across multiple platforms (Printables, Thingiverse, MakerWorld, GrabCAD, Cults3D, MyMiniFactory) from a single dashboard. Filter by category, save results to a local favorites database organized by category, optionally hypothetically sign in with Google to import your likes and collections from linked platform accounts. Reason why I'm saying hypothetically is because I haven't reviewed/tested the code yet that Claude generated for this feature, and for now local favorites is already sufficient for now ;). That said, hopefully this self-hosted aggregator will motivate others to test/and or extend it's features!
 
+The same model often gets reposted across several platforms — search results are deduplicated by default (title-similarity heuristic) and merged into a single card combining the image gallery, tags, and per-platform links, rather than showing every repost separately. Toggleable off if you'd rather see every copy on its own.
+
 <img src=assets/screenshot.png width=300>
 
 Built with Next.js 15, TypeScript, Tailwind CSS, and Prisma (SQLite in dev).
