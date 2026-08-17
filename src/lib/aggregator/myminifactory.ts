@@ -28,19 +28,29 @@ interface MmfSearchResponse {
   items: MmfItem[];
 }
 
-function thumbnailOf(item: MmfItem): string {
+function urlOf(image: MmfImage): string | null {
+  return image.thumbnail?.url ?? image.small?.url ?? null;
+}
+
+function galleryOf(item: MmfItem): string[] {
   const images = item.images ?? [];
-  const primary = images.find((image) => image.is_primary) ?? images[0];
-  return primary?.thumbnail?.url ?? primary?.small?.url ?? '';
+  const primaryIndex = images.findIndex((image) => image.is_primary);
+  const ordered =
+    primaryIndex > 0
+      ? [images[primaryIndex], ...images.slice(0, primaryIndex), ...images.slice(primaryIndex + 1)]
+      : images;
+  return ordered.map(urlOf).filter((url): url is string => Boolean(url));
 }
 
 function toUnified(item: MmfItem): UnifiedModelResult {
+  const images = galleryOf(item);
   return {
     id: String(item.id),
     title: item.name,
     sourcePlatform: 'myminifactory',
     author: item.designer?.name ?? item.designer?.username ?? 'Unknown',
-    thumbnailUrl: thumbnailOf(item),
+    thumbnailUrl: images[0] ?? '',
+    images,
     externalUrl: item.url ?? `https://www.myminifactory.com/object/3d-print-${item.id}`,
     likesCount: item.likes ?? 0,
     // MyMiniFactory's search API docs are behind bot protection and this

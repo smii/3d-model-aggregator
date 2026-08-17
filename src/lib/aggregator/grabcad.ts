@@ -42,12 +42,14 @@ interface GrabCadSearchResponse {
 }
 
 function toUnified(model: GrabCadModel): UnifiedModelResult {
+  const thumbnailUrl = model.preview_image ?? '';
   return {
     id: model.cached_slug,
     title: model.name,
     sourcePlatform: 'grabcad',
     author: model.author?.name ?? 'Unknown',
-    thumbnailUrl: model.preview_image ?? '',
+    thumbnailUrl,
+    images: thumbnailUrl ? [thumbnailUrl] : [],
     externalUrl: `https://grabcad.com/library/${model.cached_slug}`,
     likesCount: model.likes_count ?? 0,
     downloadsCount: model.downloads_count ?? 0,

@@ -35,6 +35,9 @@ const SEARCH_QUERY = /* GraphQL */ `
         image {
           filePath
         }
+        images {
+          filePath
+        }
         user {
           publicUsername
         }
@@ -56,6 +59,7 @@ interface PrintablesItem {
   likesCount: number | null;
   downloadCount: number | null;
   image: { filePath: string | null } | null;
+  images: { filePath: string | null }[] | null;
   user: { publicUsername: string | null } | null;
   license: { name: string | null } | null;
   tags: { name: string }[] | null;
@@ -67,12 +71,22 @@ interface PrintablesSearchResponse {
 }
 
 function toUnified(item: PrintablesItem): UnifiedModelResult {
+  const primary = item.image?.filePath ?? null;
+  const gallery = (item.images ?? [])
+    .map((image) => image.filePath)
+    .filter((path): path is string => Boolean(path));
+  // Primary first, then the rest of the gallery minus any duplicate of it.
+  const images = [primary, ...gallery.filter((path) => path !== primary)]
+    .filter((path): path is string => Boolean(path))
+    .map((path) => `${MEDIA_BASE}/${path}`);
+
   return {
     id: item.id,
     title: item.name,
     sourcePlatform: 'printables',
     author: item.user?.publicUsername ?? 'Unknown',
-    thumbnailUrl: item.image?.filePath ? `${MEDIA_BASE}/${item.image.filePath}` : '',
+    thumbnailUrl: images[0] ?? '',
+    images,
     externalUrl: `https://www.printables.com/model/${item.id}-${item.slug}`,
     likesCount: item.likesCount ?? 0,
     downloadsCount: item.downloadCount ?? 0,

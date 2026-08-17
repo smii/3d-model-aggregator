@@ -32,12 +32,16 @@ interface MakerWorldSearchResponse {
 }
 
 function toUnified(hit: MakerWorldHit): UnifiedModelResult {
+  const thumbnailUrl = hit.cover ?? '';
   return {
     id: String(hit.id),
     title: hit.title,
     sourcePlatform: 'makerworld',
     author: hit.designCreator?.name ?? 'Unknown',
-    thumbnailUrl: hit.cover ?? '',
+    thumbnailUrl,
+    // coverLandscape/coverPortrait are crop variants of this same cover
+    // photo, not a gallery of distinct images -- just the one.
+    images: thumbnailUrl ? [thumbnailUrl] : [],
     externalUrl: `https://makerworld.com/en/models/${hit.id}`,
     likesCount: hit.likeCount ?? 0,
     downloadsCount: hit.downloadCount ?? 0,

@@ -22,12 +22,16 @@ interface ThingiverseSearchResponse {
 }
 
 function toUnified(hit: ThingiverseHit): UnifiedModelResult {
+  const thumbnailUrl = hit.thumbnail ?? hit.preview_image ?? '';
   return {
     id: String(hit.id),
     title: hit.name,
     sourcePlatform: 'thingiverse',
     author: hit.creator?.name ?? 'Unknown',
-    thumbnailUrl: hit.thumbnail ?? hit.preview_image ?? '',
+    thumbnailUrl,
+    // Search hits only have one real image (thumbnail/preview_image are the
+    // same shot at different sizes, not a gallery).
+    images: thumbnailUrl ? [thumbnailUrl] : [],
     externalUrl: hit.public_url ?? `https://www.thingiverse.com/thing:${hit.id}`,
     likesCount: hit.like_count ?? 0,
     // Thingiverse's search hits don't include download_count (only the

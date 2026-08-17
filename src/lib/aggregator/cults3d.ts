@@ -14,6 +14,9 @@ const SEARCH_QUERY = /* GraphQL */ `
         name(locale: EN)
         shortUrl
         illustrationImageUrl
+        illustrations {
+          imageUrl
+        }
         likesCount
         downloadsCount
         openPriced
@@ -33,6 +36,7 @@ interface Cults3dCreation {
   name: string;
   shortUrl: string;
   illustrationImageUrl: string | null;
+  illustrations: { imageUrl: string | null }[] | null;
   likesCount: number | null;
   downloadsCount: number | null;
   // "Pay what you want" creations report openPriced: true with a nonzero
@@ -49,12 +53,21 @@ interface Cults3dSearchResponse {
 
 function toUnified(creation: Cults3dCreation): UnifiedModelResult {
   const isPaid = creation.openPriced === false && (creation.price?.cents ?? 0) > 0;
+  const primary = creation.illustrationImageUrl ?? null;
+  const gallery = (creation.illustrations ?? [])
+    .map((illustration) => illustration.imageUrl)
+    .filter((url): url is string => Boolean(url));
+  const images = [primary, ...gallery.filter((url) => url !== primary)].filter(
+    (url): url is string => Boolean(url),
+  );
+
   return {
     id: creation.shortUrl,
     title: creation.name,
     sourcePlatform: 'cults3d',
     author: creation.creator?.nick ?? 'Unknown',
-    thumbnailUrl: creation.illustrationImageUrl ?? '',
+    thumbnailUrl: images[0] ?? '',
+    images,
     externalUrl: creation.shortUrl,
     likesCount: creation.likesCount ?? 0,
     downloadsCount: creation.downloadsCount ?? 0,

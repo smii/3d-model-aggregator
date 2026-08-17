@@ -35,6 +35,14 @@ export interface UnifiedModelResult {
   sourcePlatform: SourcePlatform;
   author: string;
   thumbnailUrl: string;
+  /**
+   * The full image gallery when the platform's search response exposes one
+   * (Printables, Cults3D, MyMiniFactory) -- always includes thumbnailUrl as
+   * the first entry. Everywhere else this is just [thumbnailUrl]: MakerWorld
+   * only offers crop variants of the same photo (not distinct images),
+   * GrabCAD and Thingiverse only return a single image in search results.
+   */
+  images: string[];
   externalUrl: string;
   likesCount: number;
   /**

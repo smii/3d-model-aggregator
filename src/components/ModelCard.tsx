@@ -1,6 +1,7 @@
 "use client";
 
-import { Box, Copy, ExternalLink, Heart } from "lucide-react";
+import { useRef, useState } from "react";
+import { Box, ChevronLeft, ChevronRight, Copy, ExternalLink, Heart } from "lucide-react";
 import type { SourcePlatform, UnifiedModelResult } from "@/types/model";
 
 // Only Thingiverse's file API resolves to a browser-fetchable (CORS-open)
@@ -35,6 +36,92 @@ function formatPrice(price: { cents: number; currency: string }): string {
   }).format(price.cents / 100);
 }
 
+const SWIPE_THRESHOLD_PX = 40;
+
+// Click arrows (desktop) + touch swipe (mobile/PWA) through a result's image
+// gallery. Only Printables, Cults3D, and MyMiniFactory return more than one
+// image per result in search — everywhere else model.images is a single
+// entry and this renders as a plain static image (no arrows/dots).
+function ImageSlider({ title, images }: { title: string; images: string[] }) {
+  const [index, setIndex] = useState(0);
+  const touchStartX = useRef<number | null>(null);
+
+  if (images.length === 0) return null;
+
+  function goTo(next: number) {
+    setIndex((next + images.length) % images.length);
+  }
+
+  return (
+    <div
+      onTouchStart={(e) => {
+        touchStartX.current = e.touches[0].clientX;
+      }}
+      onTouchEnd={(e) => {
+        if (touchStartX.current === null) return;
+        const delta = e.changedTouches[0].clientX - touchStartX.current;
+        if (delta > SWIPE_THRESHOLD_PX) goTo(index - 1);
+        else if (delta < -SWIPE_THRESHOLD_PX) goTo(index + 1);
+        touchStartX.current = null;
+      }}
+      className="absolute inset-0"
+    >
+      {/* Thumbnails come from arbitrary third-party CDNs, so next/image
+          remotePatterns can't enumerate them; use a plain lazy <img>. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={images[index]}
+        alt={title}
+        loading="lazy"
+        className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+      />
+
+      {images.length > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              goTo(index - 1);
+            }}
+            aria-label="Previous image"
+            className="absolute left-1 top-1/2 -translate-y-1/2 rounded-full bg-zinc-950/70 p-1 text-zinc-300 opacity-0 backdrop-blur-sm transition-opacity hover:text-zinc-100 group-hover:opacity-100"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              goTo(index + 1);
+            }}
+            aria-label="Next image"
+            className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full bg-zinc-950/70 p-1 text-zinc-300 opacity-0 backdrop-blur-sm transition-opacity hover:text-zinc-100 group-hover:opacity-100"
+          >
+            <ChevronRight className="size-4" />
+          </button>
+          <div className="absolute inset-x-0 bottom-1.5 flex items-center justify-center gap-1">
+            {images.map((image, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goTo(i);
+                }}
+                aria-label={`Go to image ${i + 1}`}
+                className={`size-1.5 rounded-full transition-colors ${
+                  i === index ? "bg-white" : "bg-white/40 hover:bg-white/70"
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 interface ModelCardProps {
   model: UnifiedModelResult;
   onToggleSave: (model: UnifiedModelResult) => void;
@@ -57,14 +144,9 @@ export function ModelCard({
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/50 transition-colors hover:border-zinc-700">
       <div className="relative aspect-[4/3] overflow-hidden bg-zinc-800">
-        {/* Thumbnails come from arbitrary third-party CDNs, so next/image
-            remotePatterns can't enumerate them; use a plain lazy <img>. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={model.thumbnailUrl}
-          alt={model.title}
-          loading="lazy"
-          className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+        <ImageSlider
+          title={model.title}
+          images={model.images.length > 0 ? model.images : [model.thumbnailUrl]}
         />
         <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
           <span
