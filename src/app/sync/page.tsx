@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { SignInButton } from "@/components/auth-buttons";
 import { SyncPlatforms } from "@/components/sync-platforms";
+import { HIDE_GMAIL_FEATURES } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "Account Sync | 3D Model Aggregator",
@@ -19,6 +20,14 @@ const searchOnlyPlatforms = [
 ];
 
 export default async function SyncPage() {
+  if (HIDE_GMAIL_FEATURES) {
+    return (
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 text-sm text-zinc-400">
+        Account sync is disabled on this instance.
+      </div>
+    );
+  }
+
   const session = await auth();
 
   return (

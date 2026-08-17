@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/header";
 import { Sidebar } from "@/components/sidebar";
+import { HIDE_GMAIL_FEATURES } from "@/lib/config";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,7 +32,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} bg-zinc-950 text-zinc-50 antialiased`}
       >
         <Header />
-        <Sidebar />
+        <Sidebar hideGmailFeatures={HIDE_GMAIL_FEATURES} />
         <main className="min-h-screen pt-14 md:pl-56">
           <div className="mx-auto max-w-6xl p-6">{children}</div>
         </main>

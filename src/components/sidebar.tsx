@@ -4,15 +4,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Search, Heart, RefreshCw, Settings } from "lucide-react";
 
-const navItems = [
+const allNavItems = [
   { href: "/", label: "Search", icon: Search },
   { href: "/favorites", label: "Favorites", icon: Heart },
-  { href: "/sync", label: "Account Sync", icon: RefreshCw },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/sync", label: "Account Sync", icon: RefreshCw, gmail: true },
+  { href: "/settings", label: "Settings", icon: Settings, gmail: true },
 ];
 
-export function Sidebar() {
+export function Sidebar({
+  hideGmailFeatures = false,
+}: {
+  hideGmailFeatures?: boolean;
+}) {
   const pathname = usePathname();
+  const navItems = hideGmailFeatures
+    ? allNavItems.filter((item) => !item.gmail)
+    : allNavItems;
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-56 flex-col border-r border-zinc-800 bg-zinc-950 pt-14 md:flex">

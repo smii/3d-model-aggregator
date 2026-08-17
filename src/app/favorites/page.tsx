@@ -7,6 +7,7 @@ import {
   type FavoriteListItem,
 } from "@/components/FavoritesBrowser";
 import type { ModelCategory } from "@/types/model";
+import { HIDE_GMAIL_FEATURES } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "Favorites | 3D Model Aggregator",
@@ -41,16 +42,18 @@ export default async function FavoritesPage() {
         </p>
       </div>
 
-      <Link
-        href="/favorites/likes"
-        className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 transition-colors hover:border-zinc-700"
-      >
-        <span className="flex items-center gap-3 text-sm font-medium text-zinc-100">
-          <Heart className="size-4 text-rose-500" />
-          Imported likes
-        </span>
-        <ArrowRight className="size-4 text-zinc-500" />
-      </Link>
+      {!HIDE_GMAIL_FEATURES && (
+        <Link
+          href="/favorites/likes"
+          className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 transition-colors hover:border-zinc-700"
+        >
+          <span className="flex items-center gap-3 text-sm font-medium text-zinc-100">
+            <Heart className="size-4 text-rose-500" />
+            Imported likes
+          </span>
+          <ArrowRight className="size-4 text-zinc-500" />
+        </Link>
+      )}
 
       <FavoritesBrowser initialItems={items} />
     </div>

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { SignInButton } from "@/components/auth-buttons";
 import { LikedModelsBrowser } from "@/components/LikedModelsBrowser";
 import type { LikedModelItem } from "@/components/LikedModelsBrowser";
+import { HIDE_GMAIL_FEATURES } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "Likes | 3D Model Aggregator",
@@ -12,6 +13,17 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function LikesPage() {
+  if (HIDE_GMAIL_FEATURES) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeading />
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 text-sm text-zinc-400">
+          Imported likes are disabled on this instance.
+        </div>
+      </div>
+    );
+  }
+
   const session = await auth();
 
   if (!session?.user?.id) {

@@ -2,12 +2,21 @@ import type { Metadata } from "next";
 import { UserCircle, Shield, Trash2 } from "lucide-react";
 import { auth } from "@/auth";
 import { SignInButton, SignOutButton } from "@/components/auth-buttons";
+import { HIDE_GMAIL_FEATURES } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "Settings | 3D Model Aggregator",
 };
 
 export default async function SettingsPage() {
+  if (HIDE_GMAIL_FEATURES) {
+    return (
+      <div className="max-w-2xl rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 text-sm text-zinc-400">
+        Account settings are disabled on this instance.
+      </div>
+    );
+  }
+
   const session = await auth();
 
   return (
