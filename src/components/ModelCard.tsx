@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, ExternalLink, Heart } from "lucide-react";
+import { Box, Copy, ExternalLink, Heart } from "lucide-react";
 import type { SourcePlatform, UnifiedModelResult } from "@/types/model";
 
 // Only Thingiverse's file API resolves to a browser-fetchable (CORS-open)
@@ -39,9 +39,17 @@ interface ModelCardProps {
   model: UnifiedModelResult;
   onToggleSave: (model: UnifiedModelResult) => void;
   onPreview?: (model: UnifiedModelResult) => void;
+  onTagClick?: (tag: string) => void;
+  selectedTags?: ReadonlySet<string>;
 }
 
-export function ModelCard({ model, onToggleSave, onPreview }: ModelCardProps) {
+export function ModelCard({
+  model,
+  onToggleSave,
+  onPreview,
+  onTagClick,
+  selectedTags,
+}: ModelCardProps) {
   const badge = platformBadges[model.sourcePlatform];
   const saved = model.isLikedLocally;
   const previewable = onPreview && PREVIEWABLE_PLATFORMS.has(model.sourcePlatform);
@@ -97,27 +105,61 @@ export function ModelCard({ model, onToggleSave, onPreview }: ModelCardProps) {
         </div>
       </div>
 
-      <div className="flex flex-1 items-start justify-between gap-2 p-3">
-        <div className="min-w-0">
-          <h3
-            className="truncate text-sm font-medium text-zinc-100"
-            title={model.title}
+      <div className="flex flex-1 flex-col gap-2 p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h3
+              className="truncate text-sm font-medium text-zinc-100"
+              title={model.title}
+            >
+              {model.title}
+            </h3>
+            <p className="mt-0.5 truncate text-xs text-zinc-400">
+              by {model.author} · {model.license}
+            </p>
+          </div>
+          <a
+            href={model.externalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Open ${model.title} on ${badge.label}`}
+            className="shrink-0 rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
           >
-            {model.title}
-          </h3>
-          <p className="mt-0.5 truncate text-xs text-zinc-400">
-            by {model.author}
-          </p>
+            <ExternalLink className="size-4" />
+          </a>
         </div>
-        <a
-          href={model.externalUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`Open ${model.title} on ${badge.label}`}
-          className="shrink-0 rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
-        >
-          <ExternalLink className="size-4" />
-        </a>
+
+        {model.tags.length > 0 && onTagClick && (
+          <div className="flex flex-wrap gap-1">
+            {model.tags.slice(0, 5).map((tag) => {
+              const active = selectedTags?.has(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => onTagClick(tag)}
+                  className={`rounded-md px-1.5 py-0.5 text-[11px] transition-colors ${
+                    active
+                      ? "bg-indigo-500/20 text-indigo-300"
+                      : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+                  }`}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {model.alsoFoundOn && model.alsoFoundOn.length > 0 && (
+          <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+            <Copy className="size-3 shrink-0" />
+            Also on{" "}
+            {model.alsoFoundOn
+              .map((match) => platformBadges[match.platform].label)
+              .join(", ")}
+          </p>
+        )}
       </div>
     </article>
   );

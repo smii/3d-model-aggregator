@@ -3,6 +3,8 @@
 import {
   ArrowDownWideNarrow,
   BadgeEuro,
+  Copy,
+  Scale,
   Shapes,
   SlidersHorizontal,
 } from "lucide-react";
@@ -54,6 +56,14 @@ interface SidebarFiltersProps {
   onCategoryChange: (category: ModelCategory | null) => void;
   freeOnly: boolean;
   onFreeOnlyChange: (freeOnly: boolean) => void;
+  /** Distinct licenses present in the current results, with counts. */
+  licenseOptions: ReadonlyArray<{ license: string; count: number }>;
+  license: string | null;
+  onLicenseChange: (license: string | null) => void;
+  selectedTags: ReadonlySet<string>;
+  onClearTag: (tag: string) => void;
+  hideDuplicates: boolean;
+  onHideDuplicatesChange: (hideDuplicates: boolean) => void;
 }
 
 export function SidebarFilters({
@@ -65,6 +75,13 @@ export function SidebarFilters({
   onCategoryChange,
   freeOnly,
   onFreeOnlyChange,
+  licenseOptions,
+  license,
+  onLicenseChange,
+  selectedTags,
+  onClearTag,
+  hideDuplicates,
+  onHideDuplicatesChange,
 }: SidebarFiltersProps) {
   return (
     <aside className="flex w-full shrink-0 flex-col gap-6 lg:w-60">
@@ -218,6 +235,99 @@ export function SidebarFilters({
         <p className="mt-3 text-xs leading-relaxed text-zinc-600">
           Only Cults3D has paid listings among the connected platforms —
           this hides those.
+        </p>
+      </section>
+
+      {licenseOptions.length > 0 && (
+        <section className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+          <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            <Scale className="size-3.5" />
+            License
+          </h2>
+          <fieldset className="mt-3 flex flex-col gap-0.5">
+            <legend className="sr-only">Filter by license</legend>
+            <label
+              className={`flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-zinc-800/60 ${
+                license === null ? "text-zinc-100" : "text-zinc-400"
+              }`}
+            >
+              <input
+                type="radio"
+                name="license"
+                checked={license === null}
+                onChange={() => onLicenseChange(null)}
+                className="size-4 accent-indigo-500"
+              />
+              All licenses
+            </label>
+            {licenseOptions.map(({ license: value, count }) => {
+              const active = license === value;
+              return (
+                <label
+                  key={value}
+                  className={`flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-zinc-800/60 ${
+                    active ? "text-zinc-100" : "text-zinc-400"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="license"
+                    checked={active}
+                    onChange={() => onLicenseChange(value)}
+                    className="size-4 accent-indigo-500"
+                  />
+                  <span className="flex-1 truncate" title={value}>
+                    {value}
+                  </span>
+                  <span className="text-xs text-zinc-500">{count}</span>
+                </label>
+              );
+            })}
+          </fieldset>
+        </section>
+      )}
+
+      {selectedTags.size > 0 && (
+        <section className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            Tags
+          </h2>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {[...selectedTags].map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => onClearTag(tag)}
+                className="rounded-md bg-indigo-500/20 px-2 py-1 text-xs text-indigo-300 transition-colors hover:bg-indigo-500/30"
+              >
+                {tag} ×
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 text-xs leading-relaxed text-zinc-600">
+            Showing results matching any selected tag. Click a tag chip on a
+            result to add it, or here to remove it.
+          </p>
+        </section>
+      )}
+
+      <section className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+        <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          <Copy className="size-3.5" />
+          Duplicates
+        </h2>
+        <label className="mt-3 flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-800/60">
+          <input
+            type="checkbox"
+            checked={hideDuplicates}
+            onChange={(e) => onHideDuplicatesChange(e.target.checked)}
+            className="size-4 rounded border-zinc-700 accent-indigo-500"
+          />
+          Hide likely duplicates
+        </label>
+        <p className="mt-3 text-xs leading-relaxed text-zinc-600">
+          Best-effort: groups results with very similar titles across
+          platforms and keeps only the most-liked copy.
         </p>
       </section>
     </aside>

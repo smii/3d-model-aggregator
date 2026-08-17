@@ -1,4 +1,5 @@
 import type { ModelCategory, SourcePlatform, UnifiedModelResult } from '@/types/model';
+import { annotateDuplicates } from './dedupe';
 import { cults3dAdapter } from './cults3d';
 import { grabcadAdapter } from './grabcad';
 import { makerworldAdapter } from './makerworld';
@@ -129,5 +130,5 @@ export async function searchAllPlatforms(
     }
   });
 
-  return { results: mergeResults(perPlatform), failures };
+  return { results: annotateDuplicates(mergeResults(perPlatform), options.query), failures };
 }

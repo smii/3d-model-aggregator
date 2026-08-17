@@ -29,6 +29,7 @@ export default async function FavoritesPage() {
     sourcePlatform: favorite.sourcePlatform,
     likesCount: favorite.likesCount,
     category: favorite.category,
+    createdAt: favorite.createdAt.toISOString(),
   }));
 
   return (

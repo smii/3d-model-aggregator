@@ -18,6 +18,7 @@ import { FavoriteCategoryModal } from "@/components/FavoriteCategoryModal";
 import { ModelPreviewModal } from "@/components/ModelPreviewModal";
 import { SaveSearchModal } from "@/components/SaveSearchModal";
 import { getFavoriteCategoryOptions } from "@/lib/favorite-categories";
+import { collapseDuplicates } from "@/lib/duplicate-groups";
 import {
   isModelCategory,
   type ModelCategory,
@@ -60,6 +61,9 @@ function SearchPage() {
   );
   const [sort, setSort] = useState<SortOption>("newest");
   const [freeOnly, setFreeOnly] = useState(false);
+  const [selectedLicense, setSelectedLicense] = useState<string | null>(null);
+  const [selectedTags, setSelectedTags] = useState<ReadonlySet<string>>(new Set());
+  const [hideDuplicates, setHideDuplicates] = useState(false);
   const [category, setCategory] = useState<ModelCategory | null>(null);
   const [search, setSearch] = useState<SearchState>({ status: "idle" });
   const [page, setPage] = useState(1);
@@ -234,6 +238,18 @@ function SearchPage() {
     });
   }
 
+  function toggleTag(tag: string) {
+    setSelectedTags((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag)) {
+        next.delete(tag);
+      } else {
+        next.add(tag);
+      }
+      return next;
+    });
+  }
+
   async function runSearch(
     targetPage = 1,
     categoryOverride?: ModelCategory | null
@@ -357,17 +373,44 @@ function SearchPage() {
     }
   }
 
+  // License options are derived before the license filter itself is applied
+  // (platform/price only) so picking one doesn't collapse the other options.
+  const licenseOptions = useMemo(() => {
+    if (search.status !== "done") return [];
+    const base = search.results
+      .filter((result) => selected.has(result.sourcePlatform))
+      .filter((result) => !freeOnly || result.price === null);
+    const counts = new Map<string, number>();
+    for (const result of base) {
+      counts.set(result.license, (counts.get(result.license) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .map(([license, count]) => ({ license, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [search, selected, freeOnly]);
+
   const visibleResults = useMemo(() => {
     if (search.status !== "done") return [];
-    const filtered = search.results
+    let filtered = search.results
       .filter((result) => selected.has(result.sourcePlatform))
       .filter((result) => !freeOnly || result.price === null)
+      .filter((result) => !selectedLicense || result.license === selectedLicense)
+      .filter(
+        (result) =>
+          selectedTags.size === 0 ||
+          result.tags.some((tag) => selectedTags.has(tag))
+      )
       .map((result) => ({
         ...result,
         isLikedLocally: savedKeys.has(
           `${result.sourcePlatform}:${result.id}`
         ),
       }));
+
+    if (hideDuplicates) {
+      filtered = collapseDuplicates(filtered);
+    }
+
     if (sort === "most_liked") {
       return [...filtered].sort((a, b) => b.likesCount - a.likesCount);
     }
@@ -375,7 +418,16 @@ function SearchPage() {
       return [...filtered].sort((a, b) => b.downloadsCount - a.downloadsCount);
     }
     return filtered;
-  }, [search, selected, sort, freeOnly, savedKeys]);
+  }, [
+    search,
+    selected,
+    sort,
+    freeOnly,
+    selectedLicense,
+    selectedTags,
+    hideDuplicates,
+    savedKeys,
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -390,7 +442,15 @@ function SearchPage() {
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="flex-1">
-          <SearchBar value={query} onChange={setQuery} onSubmit={runSearch} />
+          <SearchBar
+            value={query}
+            onChange={setQuery}
+            onSubmit={() => {
+              setSelectedLicense(null);
+              setSelectedTags(new Set());
+              runSearch();
+            }}
+          />
         </div>
         {query.trim() && (
           <button
@@ -415,6 +475,13 @@ function SearchPage() {
             onCategoryChange={changeCategory}
             freeOnly={freeOnly}
             onFreeOnlyChange={setFreeOnly}
+            licenseOptions={licenseOptions}
+            license={selectedLicense}
+            onLicenseChange={setSelectedLicense}
+            selectedTags={selectedTags}
+            onClearTag={toggleTag}
+            hideDuplicates={hideDuplicates}
+            onHideDuplicatesChange={setHideDuplicates}
           />
         </FilterDrawer>
 
@@ -485,6 +552,8 @@ function SearchPage() {
                   models={visibleResults}
                   onToggleSave={toggleSave}
                   onPreview={setPreviewModel}
+                  onTagClick={toggleTag}
+                  selectedTags={selectedTags}
                 />
                 <Pagination
                   page={page}

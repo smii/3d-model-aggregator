@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
+  ArrowDownWideNarrow,
   Box,
   Download,
   ExternalLink,
@@ -32,10 +33,19 @@ export interface FavoriteListItem {
   // A platform-native category id (src/types/model.ts) or a user-created
   // custom category string.
   category: string | null;
+  createdAt: string;
 }
 
 // Sidebar radio value: "all" | "uncategorized" | a category value
 type CategoryFilter = "all" | "uncategorized" | string;
+
+type SortBy = "newest" | "oldest" | "most_liked" | "title";
+const sortOptions: ReadonlyArray<{ id: SortBy; label: string }> = [
+  { id: "newest", label: "Newest" },
+  { id: "oldest", label: "Oldest" },
+  { id: "most_liked", label: "Most Liked" },
+  { id: "title", label: "Title (A–Z)" },
+];
 
 function badgeFor(platform: string) {
   return (
@@ -57,6 +67,7 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
   const [selected, setSelected] = useState<ReadonlySet<string> | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [previewItem, setPreviewItem] = useState<FavoriteListItem | null>(null);
+  const [sortBy, setSortBy] = useState<SortBy>("newest");
 
   const platforms = useMemo(() => {
     const counts = new Map<string, number>();
@@ -174,7 +185,7 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return items.filter((item) => {
+    const matches = items.filter((item) => {
       if (!selectedPlatforms.has(item.sourcePlatform)) return false;
       if (categoryFilter === "uncategorized" && item.category !== null) return false;
       if (
@@ -190,7 +201,24 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
         item.author.toLowerCase().includes(q)
       );
     });
-  }, [items, query, selectedPlatforms, categoryFilter]);
+
+    const sorted = [...matches];
+    switch (sortBy) {
+      case "oldest":
+        sorted.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+        break;
+      case "most_liked":
+        sorted.sort((a, b) => b.likesCount - a.likesCount);
+        break;
+      case "title":
+        sorted.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case "newest":
+      default:
+        sorted.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    }
+    return sorted;
+  }, [items, query, selectedPlatforms, categoryFilter, sortBy]);
 
   if (items.length === 0) {
     return (
@@ -309,6 +337,36 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
                     />
                     <span className="flex-1">{label}</span>
                     <span className="text-xs text-zinc-500">{count}</span>
+                  </label>
+                );
+              })}
+            </fieldset>
+          </section>
+
+          <section className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+            <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              <ArrowDownWideNarrow className="size-3.5" />
+              Sort by
+            </h2>
+            <fieldset className="mt-3 flex flex-col gap-0.5">
+              <legend className="sr-only">Sort favorites</legend>
+              {sortOptions.map(({ id, label }) => {
+                const active = sortBy === id;
+                return (
+                  <label
+                    key={id}
+                    className={`flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-zinc-800/60 ${
+                      active ? "text-zinc-100" : "text-zinc-400"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="favorites-sort"
+                      checked={active}
+                      onChange={() => setSortBy(id)}
+                      className="size-4 accent-indigo-500"
+                    />
+                    {label}
                   </label>
                 );
               })}

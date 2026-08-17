@@ -55,4 +55,10 @@ export interface UnifiedModelResult {
   tags: string[];
   license: string;
   isLikedLocally: boolean;
+  /**
+   * Other platforms carrying what looks like the same model, based on a
+   * title-similarity heuristic (see src/lib/aggregator/dedupe.ts) — filled
+   * in server-side after merging every platform's results, not by adapters.
+   */
+  alsoFoundOn?: { platform: SourcePlatform; id: string }[];
 }
