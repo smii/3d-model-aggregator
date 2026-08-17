@@ -233,7 +233,25 @@ export function ModelCard({
           </div>
         )}
 
-        {model.alsoFoundOn && model.alsoFoundOn.length > 0 && (
+        {model.mergedPlatforms && model.mergedPlatforms.length > 1 && (
+          <div className="flex flex-wrap items-center gap-1">
+            <Copy className="size-3 shrink-0 text-zinc-500" />
+            {model.mergedPlatforms.map((copy) => (
+              <a
+                key={copy.platform}
+                href={copy.externalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`${copy.likesCount} likes on ${platformBadges[copy.platform].label}`}
+                className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold transition-opacity hover:opacity-80 ${platformBadges[copy.platform].className}`}
+              >
+                {platformBadges[copy.platform].label}
+              </a>
+            ))}
+          </div>
+        )}
+
+        {!model.mergedPlatforms && model.alsoFoundOn && model.alsoFoundOn.length > 0 && (
           <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
             <Copy className="size-3 shrink-0" />
             Also on{" "}

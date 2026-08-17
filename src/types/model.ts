@@ -69,4 +69,19 @@ export interface UnifiedModelResult {
    * in server-side after merging every platform's results, not by adapters.
    */
   alsoFoundOn?: { platform: SourcePlatform; id: string }[];
+  /**
+   * Present only on a client-side merged duplicate group (see
+   * src/lib/duplicate-groups.ts, mergeDuplicateGroups) -- every platform
+   * copy folded into this card, this result's own platform included, sorted
+   * most-liked first. Lets the UI list every place the model is actually
+   * available instead of just the one primary link.
+   */
+  mergedPlatforms?: {
+    platform: SourcePlatform;
+    id: string;
+    externalUrl: string;
+    likesCount: number;
+    downloadsCount: number;
+    price: { cents: number; currency: string } | null;
+  }[];
 }

@@ -18,7 +18,7 @@ import { FavoriteCategoryModal } from "@/components/FavoriteCategoryModal";
 import { ModelPreviewModal } from "@/components/ModelPreviewModal";
 import { SaveSearchModal } from "@/components/SaveSearchModal";
 import { getFavoriteCategoryOptions } from "@/lib/favorite-categories";
-import { collapseDuplicates } from "@/lib/duplicate-groups";
+import { mergeDuplicateGroups } from "@/lib/duplicate-groups";
 import {
   isModelCategory,
   type ModelCategory,
@@ -63,7 +63,7 @@ function SearchPage() {
   const [freeOnly, setFreeOnly] = useState(false);
   const [selectedLicense, setSelectedLicense] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<ReadonlySet<string>>(new Set());
-  const [hideDuplicates, setHideDuplicates] = useState(false);
+  const [mergeDuplicates, setMergeDuplicates] = useState(true);
   const [category, setCategory] = useState<ModelCategory | null>(null);
   const [search, setSearch] = useState<SearchState>({ status: "idle" });
   const [page, setPage] = useState(1);
@@ -419,8 +419,8 @@ function SearchPage() {
         ),
       }));
 
-    if (hideDuplicates) {
-      filtered = collapseDuplicates(filtered);
+    if (mergeDuplicates) {
+      filtered = mergeDuplicateGroups(filtered);
     }
 
     if (sort === "most_liked") {
@@ -437,7 +437,7 @@ function SearchPage() {
     freeOnly,
     selectedLicense,
     selectedTags,
-    hideDuplicates,
+    mergeDuplicates,
     savedKeys,
   ]);
 
@@ -492,8 +492,8 @@ function SearchPage() {
             onLicenseChange={setSelectedLicense}
             selectedTags={selectedTags}
             onClearTag={toggleTag}
-            hideDuplicates={hideDuplicates}
-            onHideDuplicatesChange={setHideDuplicates}
+            mergeDuplicates={mergeDuplicates}
+            onMergeDuplicatesChange={setMergeDuplicates}
           />
         </FilterDrawer>
 

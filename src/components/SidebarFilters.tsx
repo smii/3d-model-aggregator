@@ -62,8 +62,8 @@ interface SidebarFiltersProps {
   onLicenseChange: (license: string | null) => void;
   selectedTags: ReadonlySet<string>;
   onClearTag: (tag: string) => void;
-  hideDuplicates: boolean;
-  onHideDuplicatesChange: (hideDuplicates: boolean) => void;
+  mergeDuplicates: boolean;
+  onMergeDuplicatesChange: (mergeDuplicates: boolean) => void;
 }
 
 export function SidebarFilters({
@@ -80,8 +80,8 @@ export function SidebarFilters({
   onLicenseChange,
   selectedTags,
   onClearTag,
-  hideDuplicates,
-  onHideDuplicatesChange,
+  mergeDuplicates,
+  onMergeDuplicatesChange,
 }: SidebarFiltersProps) {
   return (
     <aside className="flex w-full shrink-0 flex-col gap-6 lg:w-60">
@@ -319,15 +319,17 @@ export function SidebarFilters({
         <label className="mt-3 flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-800/60">
           <input
             type="checkbox"
-            checked={hideDuplicates}
-            onChange={(e) => onHideDuplicatesChange(e.target.checked)}
+            checked={mergeDuplicates}
+            onChange={(e) => onMergeDuplicatesChange(e.target.checked)}
             className="size-4 rounded border-zinc-700 accent-indigo-500"
           />
-          Hide likely duplicates
+          Merge likely duplicates
         </label>
         <p className="mt-3 text-xs leading-relaxed text-zinc-600">
           Best-effort: groups results with very similar titles across
-          platforms and keeps only the most-liked copy.
+          platforms into one card combining their images, tags, and
+          per-platform links. On by default; turn off to see every copy
+          separately.
         </p>
       </section>
     </aside>
