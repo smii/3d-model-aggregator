@@ -16,6 +16,11 @@ const SEARCH_QUERY = /* GraphQL */ `
         illustrationImageUrl
         likesCount
         downloadsCount
+        openPriced
+        price {
+          cents
+          currency
+        }
         creator {
           nick
         }
@@ -30,6 +35,10 @@ interface Cults3dCreation {
   illustrationImageUrl: string | null;
   likesCount: number | null;
   downloadsCount: number | null;
+  // "Pay what you want" creations report openPriced: true with a nonzero
+  // suggested price — that's not a hard paywall, so treated as free.
+  openPriced: boolean | null;
+  price: { cents: number; currency: string } | null;
   creator: { nick: string | null } | null;
 }
 
@@ -39,6 +48,7 @@ interface Cults3dSearchResponse {
 }
 
 function toUnified(creation: Cults3dCreation): UnifiedModelResult {
+  const isPaid = creation.openPriced === false && (creation.price?.cents ?? 0) > 0;
   return {
     id: creation.shortUrl,
     title: creation.name,
@@ -48,6 +58,7 @@ function toUnified(creation: Cults3dCreation): UnifiedModelResult {
     externalUrl: creation.shortUrl,
     likesCount: creation.likesCount ?? 0,
     downloadsCount: creation.downloadsCount ?? 0,
+    price: isPaid && creation.price ? creation.price : null,
     tags: [],
     license: 'Unknown',
     isLikedLocally: false,

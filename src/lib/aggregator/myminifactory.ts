@@ -47,6 +47,9 @@ function toUnified(item: MmfItem): UnifiedModelResult {
     // adapter has no API key configured to verify against live, so whether
     // a download count is available here is unconfirmed. Left at 0.
     downloadsCount: 0,
+    // MyMiniFactory does have a paid marketplace, but there's no API key
+    // configured to verify what field this would come from — left null.
+    price: null,
     tags: item.tags ?? [],
     license: 'Unknown',
     isLikedLocally: false,

@@ -1,4 +1,4 @@
-import type { UnifiedModelResult } from '@/types/model';
+import type { ModelCategory, SourcePlatform, UnifiedModelResult } from '@/types/model';
 import { cults3dAdapter } from './cults3d';
 import { grabcadAdapter } from './grabcad';
 import { makerworldAdapter } from './makerworld';
@@ -33,6 +33,46 @@ const DEFAULT_ADAPTERS: SearchAdapter[] = [
   grabcadAdapter,
   myminifactoryAdapter,
 ];
+
+// Thangs and Creality Cloud are absent: both gate search behind Cloudflare
+// bot challenges that block server-side requests (and headless browsers).
+const ADAPTERS_BY_PLATFORM: Partial<Record<SourcePlatform, SearchAdapter>> = {
+  thingiverse: thingiverseAdapter,
+  makerworld: makerworldAdapter,
+  printables: printablesAdapter,
+  cults3d: cults3dAdapter,
+  grabcad: grabcadAdapter,
+  myminifactory: myminifactoryAdapter,
+};
+
+/**
+ * Resolve a comma-separated platform list (or every platform, if omitted)
+ * to adapters, excluding any that can't natively filter by the requested
+ * category rather than letting them return unfiltered matches. Shared by
+ * /api/search and /api/saved-searches/run so both apply identical rules.
+ */
+export function resolveSearchAdapters(options: {
+  platforms?: string | null;
+  category?: ModelCategory;
+}): { adapters: SearchAdapter[]; skipped: SourcePlatform[] } {
+  const requested = options.platforms?.split(',').filter(Boolean);
+  let adapters = requested
+    ? requested
+        .map((platform) => ADAPTERS_BY_PLATFORM[platform as SourcePlatform])
+        .filter((adapter): adapter is SearchAdapter => adapter !== undefined)
+    : Object.values(ADAPTERS_BY_PLATFORM);
+
+  let skipped: SourcePlatform[] = [];
+  if (options.category) {
+    const category = options.category;
+    skipped = adapters
+      .filter((adapter) => !adapter.supportsCategory?.(category))
+      .map((adapter) => adapter.platform);
+    adapters = adapters.filter((adapter) => adapter.supportsCategory?.(category));
+  }
+
+  return { adapters, skipped };
+}
 
 function resultKey(result: UnifiedModelResult): string {
   return `${result.sourcePlatform}:${result.id}`;

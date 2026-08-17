@@ -76,6 +76,9 @@ function toUnified(item: PrintablesItem): UnifiedModelResult {
     externalUrl: `https://www.printables.com/model/${item.id}-${item.slug}`,
     likesCount: item.likesCount ?? 0,
     downloadsCount: item.downloadCount ?? 0,
+    // Printables' API has a `price` field but it's null on every result
+    // observed live (no paid listings surfaced through this search endpoint).
+    price: null,
     tags: item.tags?.map((tag) => tag.name) ?? [],
     license: item.license?.name ?? 'Unknown',
     isLikedLocally: false,

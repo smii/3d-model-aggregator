@@ -44,6 +44,14 @@ export interface UnifiedModelResult {
    * is unverified — its docs are behind bot protection).
    */
   downloadsCount: number;
+  /**
+   * Price as reported by the source platform, null when free or when the
+   * platform doesn't sell paid content at all. Only Cults3D populates this
+   * (it's the only platform in this app with a real paid marketplace) —
+   * Printables has a `price` field in its API but it's null on every result
+   * observed, and the rest are free-only platforms.
+   */
+  price: { cents: number; currency: string } | null;
   tags: string[];
   license: string;
   isLikedLocally: boolean;

@@ -1,6 +1,11 @@
 "use client";
 
-import { ArrowDownWideNarrow, Shapes, SlidersHorizontal } from "lucide-react";
+import {
+  ArrowDownWideNarrow,
+  BadgeEuro,
+  Shapes,
+  SlidersHorizontal,
+} from "lucide-react";
 import type { ModelCategory, SortOption, SourcePlatform } from "@/types/model";
 
 export const platformOptions: ReadonlyArray<{
@@ -47,6 +52,8 @@ interface SidebarFiltersProps {
   onSortChange: (sort: SortOption) => void;
   category: ModelCategory | null;
   onCategoryChange: (category: ModelCategory | null) => void;
+  freeOnly: boolean;
+  onFreeOnlyChange: (freeOnly: boolean) => void;
 }
 
 export function SidebarFilters({
@@ -56,6 +63,8 @@ export function SidebarFilters({
   onSortChange,
   category,
   onCategoryChange,
+  freeOnly,
+  onFreeOnlyChange,
 }: SidebarFiltersProps) {
   return (
     <aside className="flex w-full shrink-0 flex-col gap-6 lg:w-60">
@@ -190,6 +199,26 @@ export function SidebarFilters({
             search results, so their results sort to the bottom.
           </p>
         )}
+      </section>
+
+      <section className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+        <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          <BadgeEuro className="size-3.5" />
+          Price
+        </h2>
+        <label className="mt-3 flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-800/60">
+          <input
+            type="checkbox"
+            checked={freeOnly}
+            onChange={(e) => onFreeOnlyChange(e.target.checked)}
+            className="size-4 rounded border-zinc-700 accent-indigo-500"
+          />
+          Free only
+        </label>
+        <p className="mt-3 text-xs leading-relaxed text-zinc-600">
+          Only Cults3D has paid listings among the connected platforms —
+          this hides those.
+        </p>
       </section>
     </aside>
   );

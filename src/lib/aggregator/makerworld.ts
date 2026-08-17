@@ -41,6 +41,7 @@ function toUnified(hit: MakerWorldHit): UnifiedModelResult {
     externalUrl: `https://makerworld.com/en/models/${hit.id}`,
     likesCount: hit.likeCount ?? 0,
     downloadsCount: hit.downloadCount ?? 0,
+    price: null, // no price field found on the search endpoint
     tags: hit.tags ?? [],
     license: hit.license ?? 'Unknown',
     isLikedLocally: false,

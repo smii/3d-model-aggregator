@@ -51,6 +51,7 @@ function toUnified(model: GrabCadModel): UnifiedModelResult {
     externalUrl: `https://grabcad.com/library/${model.cached_slug}`,
     likesCount: model.likes_count ?? 0,
     downloadsCount: model.downloads_count ?? 0,
+    price: null, // GrabCAD is a free-only engineering library
     tags: [],
     license: 'Unknown',
     isLikedLocally: false,

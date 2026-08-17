@@ -129,6 +129,31 @@ model FavoriteModel {
   @@index([category])
 }
 
+// A persisted query+filters combo, periodically re-run by a background job
+// (POST /api/saved-searches/run, driven by a K8s CronJob -- see
+// charts/3d-model-aggregator/chart/templates/cronjob.yaml in the homelab
+// repo) that flags newly-appeared results. Deliberately not tied to a user,
+// same as FavoriteModel: search itself isn't behind auth.
+model SavedSearch {
+  id              String    @id @default(cuid())
+  name            String
+  query           String
+  platforms       String // comma-separated SourcePlatform values; empty = all
+  category        String? // ModelCategory value (src/types/model.ts)
+  sort            String    @default("newest")
+  // Comma-separated "platform:externalId" keys seen as of lastRunAt, capped
+  // to the most recent run's first page -- just enough to diff against next
+  // time, not a full result history.
+  lastSeenIds     String    @default("")
+  // Results seen since the user last viewed this saved search (viewing
+  // resets this to 0 via PATCH).
+  newResultsCount Int       @default(0)
+  lastRunAt       DateTime?
+  lastError       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
 model SyncJob {
   id            String    @id @default(cuid())
   userId        String

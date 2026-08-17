@@ -34,6 +34,7 @@ function toUnified(hit: ThingiverseHit): UnifiedModelResult {
     // per-item detail endpoint does), and fetching that per result would
     // mean N extra requests per search. Left at 0.
     downloadsCount: 0,
+    price: null, // Thingiverse is a free-only platform
     tags: hit.tags?.map((tag) => tag.name) ?? [],
     license: hit.license ?? 'Unknown',
     isLikedLocally: false,

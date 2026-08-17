@@ -1,7 +1,12 @@
 "use client";
 
-import { ExternalLink, Heart } from "lucide-react";
+import { Box, ExternalLink, Heart } from "lucide-react";
 import type { SourcePlatform, UnifiedModelResult } from "@/types/model";
+
+// Only Thingiverse's file API resolves to a browser-fetchable (CORS-open)
+// STL/3MF URL without requiring the viewer's own session/purchase — see
+// src/app/api/preview/route.ts for why the others aren't wired up.
+export const PREVIEWABLE_PLATFORMS = new Set<SourcePlatform>(["thingiverse"]);
 
 export const platformBadges: Record<
   SourcePlatform,
@@ -23,14 +28,23 @@ export const platformBadges: Record<
   },
 };
 
+function formatPrice(price: { cents: number; currency: string }): string {
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: price.currency,
+  }).format(price.cents / 100);
+}
+
 interface ModelCardProps {
   model: UnifiedModelResult;
   onToggleSave: (model: UnifiedModelResult) => void;
+  onPreview?: (model: UnifiedModelResult) => void;
 }
 
-export function ModelCard({ model, onToggleSave }: ModelCardProps) {
+export function ModelCard({ model, onToggleSave, onPreview }: ModelCardProps) {
   const badge = platformBadges[model.sourcePlatform];
   const saved = model.isLikedLocally;
+  const previewable = onPreview && PREVIEWABLE_PLATFORMS.has(model.sourcePlatform);
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/50 transition-colors hover:border-zinc-700">
@@ -44,24 +58,43 @@ export function ModelCard({ model, onToggleSave }: ModelCardProps) {
           loading="lazy"
           className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
-        <span
-          className={`absolute left-2 top-2 rounded-md px-2 py-0.5 text-xs font-semibold ${badge.className}`}
-        >
-          {badge.label}
-        </span>
-        <button
-          type="button"
-          onClick={() => onToggleSave(model)}
-          aria-label={saved ? "Remove from favorites" : "Save to favorites"}
-          aria-pressed={saved}
-          className={`absolute right-2 top-2 rounded-full bg-zinc-950/70 p-2 backdrop-blur-sm transition-colors ${
-            saved
-              ? "text-rose-500 hover:text-rose-400"
-              : "text-zinc-300 hover:text-zinc-100"
-          }`}
-        >
-          <Heart className={`size-4 ${saved ? "fill-current" : ""}`} />
-        </button>
+        <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
+          <span
+            className={`rounded-md px-2 py-0.5 text-xs font-semibold ${badge.className}`}
+          >
+            {badge.label}
+          </span>
+          {model.price && (
+            <span className="rounded-md bg-amber-500 px-2 py-0.5 text-xs font-semibold text-zinc-950">
+              {formatPrice(model.price)}
+            </span>
+          )}
+        </div>
+        <div className="absolute right-2 top-2 flex gap-1.5">
+          {previewable && (
+            <button
+              type="button"
+              onClick={() => onPreview!(model)}
+              aria-label={`Preview ${model.title} in 3D`}
+              className="rounded-full bg-zinc-950/70 p-2 text-zinc-300 backdrop-blur-sm transition-colors hover:text-zinc-100"
+            >
+              <Box className="size-4" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onToggleSave(model)}
+            aria-label={saved ? "Remove from favorites" : "Save to favorites"}
+            aria-pressed={saved}
+            className={`rounded-full bg-zinc-950/70 p-2 backdrop-blur-sm transition-colors ${
+              saved
+                ? "text-rose-500 hover:text-rose-400"
+                : "text-zinc-300 hover:text-zinc-100"
+            }`}
+          >
+            <Heart className={`size-4 ${saved ? "fill-current" : ""}`} />
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 items-start justify-between gap-2 p-3">

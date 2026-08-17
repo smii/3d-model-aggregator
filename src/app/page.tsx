@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
+  Bell,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -13,12 +15,15 @@ import { SidebarFilters, platformOptions } from "@/components/SidebarFilters";
 import { FilterDrawer } from "@/components/FilterDrawer";
 import { ModelGrid } from "@/components/ModelGrid";
 import { FavoriteCategoryModal } from "@/components/FavoriteCategoryModal";
+import { ModelPreviewModal } from "@/components/ModelPreviewModal";
+import { SaveSearchModal } from "@/components/SaveSearchModal";
 import { getFavoriteCategoryOptions } from "@/lib/favorite-categories";
-import type {
-  ModelCategory,
-  SortOption,
-  SourcePlatform,
-  UnifiedModelResult,
+import {
+  isModelCategory,
+  type ModelCategory,
+  type SortOption,
+  type SourcePlatform,
+  type UnifiedModelResult,
 } from "@/types/model";
 
 interface SearchResponse {
@@ -40,12 +45,21 @@ type SearchState =
     };
 
 export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <SearchPage />
+    </Suspense>
+  );
+}
+
+function SearchPage() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<SourcePlatform>>(
     () =>
       new Set(platformOptions.filter((p) => !p.unavailable).map((p) => p.id))
   );
   const [sort, setSort] = useState<SortOption>("newest");
+  const [freeOnly, setFreeOnly] = useState(false);
   const [category, setCategory] = useState<ModelCategory | null>(null);
   const [search, setSearch] = useState<SearchState>({ status: "idle" });
   const [page, setPage] = useState(1);
@@ -65,7 +79,14 @@ export default function Home() {
     id: string;
     title: string;
   } | null>(null);
+  const [previewModel, setPreviewModel] = useState<UnifiedModelResult | null>(
+    null
+  );
+  const [saveSearchOpen, setSaveSearchOpen] = useState(false);
+  const [saveSearchNotice, setSaveSearchNotice] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const searchParams = useSearchParams();
+  const seededFromUrl = useRef(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -95,6 +116,58 @@ export default function Home() {
     return () => controller.abort();
   }, []);
 
+  // Bootstraps state from a saved search's "Open" link (?q=&platforms=&category=&sort=).
+  // Runs the search directly from the parsed URL values rather than going
+  // through runSearch()/state, since setQuery/setSelected here wouldn't have
+  // committed yet in the same tick that runSearch would read them.
+  useEffect(() => {
+    if (seededFromUrl.current) return;
+    seededFromUrl.current = true;
+    const urlQuery = searchParams.get("q");
+    if (!urlQuery) return;
+
+    const urlPlatforms = searchParams.get("platforms");
+    const urlCategory = searchParams.get("category");
+    const urlSort = searchParams.get("sort");
+
+    setQuery(urlQuery);
+    if (urlPlatforms) {
+      setSelected(new Set(urlPlatforms.split(",") as SourcePlatform[]));
+    }
+    if (urlCategory && isModelCategory(urlCategory)) {
+      setCategory(urlCategory);
+    }
+    if (urlSort === "most_liked" || urlSort === "most_downloaded" || urlSort === "newest") {
+      setSort(urlSort);
+    }
+
+    (async () => {
+      setPage(1);
+      setSearch({ status: "loading" });
+      try {
+        const params = new URLSearchParams({ q: urlQuery, page: "1" });
+        if (urlPlatforms) params.set("platforms", urlPlatforms);
+        if (urlCategory) params.set("category", urlCategory);
+        const response = await fetch(`/api/search?${params}`);
+        const data = (await response.json()) as SearchResponse;
+        if (!response.ok) {
+          throw new Error(data.error ?? `Search failed (${response.status})`);
+        }
+        setSearch({
+          status: "done",
+          results: data.results,
+          failures: data.failures,
+          skipped: data.skipped ?? [],
+        });
+      } catch (error) {
+        setSearch({
+          status: "error",
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    })();
+  }, [searchParams]);
+
   const categoryPickerOptions = useMemo(
     () => getFavoriteCategoryOptions(knownCategories),
     [knownCategories]
@@ -117,6 +190,34 @@ export default function Home() {
     } catch (error) {
       setSaveNotice(
         error instanceof Error ? error.message : "Updating category failed."
+      );
+    }
+  }
+
+  async function confirmSaveSearch(name: string) {
+    try {
+      const response = await fetch("/api/saved-searches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          query: query.trim(),
+          platforms: [...selected],
+          category,
+          sort,
+        }),
+      });
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        throw new Error(data?.error ?? `Saving search failed (${response.status}).`);
+      }
+      setSaveSearchOpen(false);
+      setSaveSearchNotice(`Saved "${name}" — check the Saved Searches page for new results.`);
+    } catch (error) {
+      setSaveSearchNotice(
+        error instanceof Error ? error.message : "Saving search failed."
       );
     }
   }
@@ -260,6 +361,7 @@ export default function Home() {
     if (search.status !== "done") return [];
     const filtered = search.results
       .filter((result) => selected.has(result.sourcePlatform))
+      .filter((result) => !freeOnly || result.price === null)
       .map((result) => ({
         ...result,
         isLikedLocally: savedKeys.has(
@@ -273,7 +375,7 @@ export default function Home() {
       return [...filtered].sort((a, b) => b.downloadsCount - a.downloadsCount);
     }
     return filtered;
-  }, [search, selected, sort, savedKeys]);
+  }, [search, selected, sort, freeOnly, savedKeys]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -286,7 +388,21 @@ export default function Home() {
         </p>
       </div>
 
-      <SearchBar value={query} onChange={setQuery} onSubmit={runSearch} />
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="flex-1">
+          <SearchBar value={query} onChange={setQuery} onSubmit={runSearch} />
+        </div>
+        {query.trim() && (
+          <button
+            type="button"
+            onClick={() => setSaveSearchOpen(true)}
+            className="flex shrink-0 items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-700 hover:text-zinc-100"
+          >
+            <Bell className="size-4" />
+            Save this search
+          </button>
+        )}
+      </div>
 
       <div className="flex flex-col gap-6 lg:flex-row">
         <FilterDrawer>
@@ -297,6 +413,8 @@ export default function Home() {
             onSortChange={setSort}
             category={category}
             onCategoryChange={changeCategory}
+            freeOnly={freeOnly}
+            onFreeOnlyChange={setFreeOnly}
           />
         </FilterDrawer>
 
@@ -305,6 +423,13 @@ export default function Home() {
             <div className="flex items-start gap-2 rounded-xl border border-amber-900/50 bg-amber-950/30 px-4 py-3 text-sm text-amber-300">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" />
               <p>{saveNotice}</p>
+            </div>
+          )}
+
+          {saveSearchNotice && (
+            <div className="flex items-start gap-2 rounded-xl border border-indigo-900/50 bg-indigo-950/30 px-4 py-3 text-sm text-indigo-300">
+              <Bell className="mt-0.5 size-4 shrink-0" />
+              <p>{saveSearchNotice}</p>
             </div>
           )}
 
@@ -356,7 +481,11 @@ export default function Home() {
           {search.status === "done" &&
             (visibleResults.length > 0 ? (
               <>
-                <ModelGrid models={visibleResults} onToggleSave={toggleSave} />
+                <ModelGrid
+                  models={visibleResults}
+                  onToggleSave={toggleSave}
+                  onPreview={setPreviewModel}
+                />
                 <Pagination
                   page={page}
                   hasNext={search.results.length > 0}
@@ -395,6 +524,21 @@ export default function Home() {
         options={categoryPickerOptions}
         onConfirm={confirmFavoriteCategory}
         onCancel={() => setPendingFavorite(null)}
+      />
+
+      <ModelPreviewModal
+        open={previewModel !== null}
+        modelTitle={previewModel?.title ?? null}
+        platform={previewModel?.sourcePlatform ?? null}
+        externalId={previewModel?.id ?? null}
+        onClose={() => setPreviewModel(null)}
+      />
+
+      <SaveSearchModal
+        open={saveSearchOpen}
+        query={query}
+        onConfirm={confirmSaveSearch}
+        onCancel={() => setSaveSearchOpen(false)}
       />
     </div>
   );

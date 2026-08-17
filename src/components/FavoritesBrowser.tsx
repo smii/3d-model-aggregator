@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import {
+  Box,
+  Download,
   ExternalLink,
   Heart,
   Search,
@@ -9,11 +11,13 @@ import {
   SlidersHorizontal,
   TriangleAlert,
 } from "lucide-react";
-import { platformBadges } from "@/components/ModelCard";
+import { platformBadges, PREVIEWABLE_PLATFORMS } from "@/components/ModelCard";
 import { categoryOptions, platformOptions } from "@/components/SidebarFilters";
 import { CategoryCombobox } from "@/components/CategoryCombobox";
 import { FilterDrawer } from "@/components/FilterDrawer";
+import { ModelPreviewModal } from "@/components/ModelPreviewModal";
 import { getFavoriteCategoryOptions } from "@/lib/favorite-categories";
+import { downloadTextFile, favoritesToCsv, favoritesToJson } from "@/lib/export-favorites";
 import type { SourcePlatform } from "@/types/model";
 
 export interface FavoriteListItem {
@@ -52,6 +56,7 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [selected, setSelected] = useState<ReadonlySet<string> | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [previewItem, setPreviewItem] = useState<FavoriteListItem | null>(null);
 
   const platforms = useMemo(() => {
     const counts = new Map<string, number>();
@@ -208,16 +213,48 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
         </div>
       )}
 
-      <div role="search" className="relative">
-        <Search className="absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-zinc-500" />
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Filter your favorites…"
-          aria-label="Filter your favorites"
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 py-3 pl-11 pr-4 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-        />
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div role="search" className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-zinc-500" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filter your favorites…"
+            aria-label="Filter your favorites"
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 py-3 pl-11 pr-4 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              downloadTextFile(
+                "favorites.json",
+                favoritesToJson(filtered),
+                "application/json"
+              )
+            }
+            className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-700 hover:text-zinc-100"
+          >
+            <Download className="size-4" />
+            JSON
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              downloadTextFile(
+                "favorites.csv",
+                favoritesToCsv(filtered),
+                "text/csv"
+              )
+            }
+            className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-700 hover:text-zinc-100"
+          >
+            <Download className="size-4" />
+            CSV
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-6 lg:flex-row">
@@ -296,11 +333,20 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
                 categoryOptions={categoryPickerOptions}
                 onChangeCategory={changeCategory}
                 onRemove={removeFavorite}
+                onPreview={setPreviewItem}
               />
             ))}
           </div>
         )}
       </div>
+
+      <ModelPreviewModal
+        open={previewItem !== null}
+        modelTitle={previewItem?.title ?? null}
+        platform={previewItem?.sourcePlatform ?? null}
+        externalId={previewItem?.externalId ?? null}
+        onClose={() => setPreviewItem(null)}
+      />
     </div>
   );
 }
@@ -340,13 +386,16 @@ function FavoriteCard({
   categoryOptions: pickerOptions,
   onChangeCategory,
   onRemove,
+  onPreview,
 }: {
   item: FavoriteListItem;
   categoryOptions: ReadonlyArray<{ value: string; label: string }>;
   onChangeCategory: (item: FavoriteListItem, next: string | null) => void;
   onRemove: (item: FavoriteListItem) => void;
+  onPreview: (item: FavoriteListItem) => void;
 }) {
   const badge = badgeFor(item.sourcePlatform);
+  const previewable = PREVIEWABLE_PLATFORMS.has(item.sourcePlatform as SourcePlatform);
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/50 transition-colors hover:border-zinc-700">
@@ -371,14 +420,26 @@ function FavoriteCard({
         >
           {badge.label}
         </span>
-        <button
-          type="button"
-          onClick={() => onRemove(item)}
-          aria-label="Remove from favorites"
-          className="absolute right-2 top-2 rounded-full bg-zinc-950/70 p-2 text-rose-500 backdrop-blur-sm transition-colors hover:text-rose-400"
-        >
-          <Heart className="size-4 fill-current" />
-        </button>
+        <div className="absolute right-2 top-2 flex gap-1.5">
+          {previewable && (
+            <button
+              type="button"
+              onClick={() => onPreview(item)}
+              aria-label={`Preview ${item.title} in 3D`}
+              className="rounded-full bg-zinc-950/70 p-2 text-zinc-300 backdrop-blur-sm transition-colors hover:text-zinc-100"
+            >
+              <Box className="size-4" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onRemove(item)}
+            aria-label="Remove from favorites"
+            className="rounded-full bg-zinc-950/70 p-2 text-rose-500 backdrop-blur-sm transition-colors hover:text-rose-400"
+          >
+            <Heart className="size-4 fill-current" />
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-3">
