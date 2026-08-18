@@ -13,6 +13,17 @@ The same model often gets reposted across several platforms — search results a
 
 Built with Next.js 15, TypeScript, Tailwind CSS, and Prisma (SQLite in dev).
 
+## Features
+
+- **Search** Printables, Thingiverse, MakerWorld, GrabCAD, Cults3D, and MyMiniFactory at once — filter by platform, category, license, tags, or free-only, and sort by newest/most liked/most downloaded.
+- **Deduplication & merge**, on by default — reposts of the same model across platforms are combined into one card (gallery, tags, per-platform links); see above, toggleable off.
+- **Swipeable image galleries** on cards where a platform actually returns more than one photo (Printables, Cults3D, MyMiniFactory) — click arrows on desktop, swipe on mobile.
+- **Favorites**, organized by category, sortable, exportable.
+- **Saved searches** — save a query and get flagged when new matches show up next time an hourly background job re-runs it, or hit "Run now" yourself.
+- **In-browser 3D preview** for Thingiverse results — the only platform whose model files are fetchable without a login/purchase session.
+- Installable as a **PWA** on Android — see Mobile & Android below.
+- Optional (hypothetical/untested) Google sign-in to import likes/collections from linked platform accounts.
+
 ## ⚠️ No security
 
 This is a personal, self-hosted tool intended to run locally. The local favorites database is deliberately **unauthenticated and shared by anyone who can reach the app** — there are no accounts, permissions, or per-user separation for favorites. Do not expose this app to the public internet as-is. 
