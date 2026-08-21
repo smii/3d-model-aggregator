@@ -9,7 +9,12 @@ Search 3D printable models across multiple platforms (Printables, Thingiverse, M
 
 The same model often gets reposted across several platforms — search results are deduplicated by default (title-similarity heuristic) and merged into a single card combining the image gallery, tags, and per-platform links, rather than showing every repost separately. Toggleable off if you'd rather see every copy on its own.
 
-<img src=assets/screenshot.png width=300>
+
+
+| Desktop View | Mobile View |
+| :---: | :---: |
+| <img src="assets/screenshot.png" width="300"> | <img src="assets/mobile_screenshot.jpg" width="100"> |
+|  |  |
 
 Built with Next.js 15, TypeScript, Tailwind CSS, and Prisma (SQLite in dev).
 
@@ -22,7 +27,7 @@ Built with Next.js 15, TypeScript, Tailwind CSS, and Prisma (SQLite in dev).
 - **Saved searches** — save a query and get flagged when new matches show up next time an hourly background job re-runs it, or hit "Run now" yourself.
 - **In-browser 3D preview** for Thingiverse results — the only platform whose model files are fetchable without a login/purchase session.
 - Installable as a **PWA** on Android — see Mobile & Android below.
-- Optional (hypothetical/untested) Google sign-in to import likes/collections from linked platform accounts.
+- Optional (hypothetical/untested) Google sign-in to import likes/collections from linked platform accounts. **Can be disabled via env**.
 
 ## ⚠️ No security
 
