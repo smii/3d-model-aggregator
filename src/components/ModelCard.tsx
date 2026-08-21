@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Box, ChevronLeft, ChevronRight, Copy, ExternalLink, Heart } from "lucide-react";
+import { Box, ChevronLeft, ChevronRight, Copy, Heart } from "lucide-react";
 import type { SourcePlatform, UnifiedModelResult } from "@/types/model";
 
 // Only Thingiverse's file API resolves to a browser-fetchable (CORS-open)
@@ -45,6 +45,10 @@ const SWIPE_THRESHOLD_PX = 40;
 function ImageSlider({ title, images }: { title: string; images: string[] }) {
   const [index, setIndex] = useState(0);
   const touchStartX = useRef<number | null>(null);
+  // Set when a horizontal swipe just changed the photo, so the synthetic
+  // click browsers fire after touchend doesn't bubble up to the card's
+  // whole-card navigation. A plain tap (no swipe) should still navigate.
+  const justSwiped = useRef(false);
 
   if (images.length === 0) return null;
 
@@ -56,13 +60,26 @@ function ImageSlider({ title, images }: { title: string; images: string[] }) {
     <div
       onTouchStart={(e) => {
         touchStartX.current = e.touches[0].clientX;
+        justSwiped.current = false;
       }}
       onTouchEnd={(e) => {
         if (touchStartX.current === null) return;
         const delta = e.changedTouches[0].clientX - touchStartX.current;
-        if (delta > SWIPE_THRESHOLD_PX) goTo(index - 1);
-        else if (delta < -SWIPE_THRESHOLD_PX) goTo(index + 1);
+        if (delta > SWIPE_THRESHOLD_PX) {
+          goTo(index - 1);
+          justSwiped.current = true;
+        } else if (delta < -SWIPE_THRESHOLD_PX) {
+          goTo(index + 1);
+          justSwiped.current = true;
+        }
         touchStartX.current = null;
+      }}
+      onClickCapture={(e) => {
+        if (justSwiped.current) {
+          justSwiped.current = false;
+          e.preventDefault();
+          e.stopPropagation();
+        }
       }}
       className="absolute inset-0"
     >
@@ -141,8 +158,50 @@ export function ModelCard({
   const saved = model.isLikedLocally;
   const previewable = onPreview && PREVIEWABLE_PLATFORMS.has(model.sourcePlatform);
 
+  // Opening the model in a new tab, matching the card's existing external
+  // link behavior. Clicks on any real link or button inside the card (title,
+  // platform badges, save/preview/tags, gallery controls) are handled by
+  // those elements and must not trigger whole-card navigation.
+  function openExternal() {
+    window.open(model.externalUrl, "_blank", "noopener,noreferrer");
+  }
+
+  // Desktop drag-select (mousedown + move + mouseup) fires a click on mouseup;
+  // track it so whole-card navigation doesn't open the model mid-selection.
+  // Mirrors ImageSlider's `justSwiped` touch guard, consumed by the handler
+  // below. SWIPE_THRESHOLD_PX is module-scoped, so it's shared with that guard.
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
+  const justDragged = useRef(false);
+
   return (
-    <article className="group flex flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/50 transition-colors hover:border-zinc-700">
+    <article
+      onMouseDown={(e) => {
+        justDragged.current = false;
+        dragStart.current = { x: e.clientX, y: e.clientY };
+      }}
+      onMouseUp={(e) => {
+        if (dragStart.current) {
+          const moved =
+            Math.abs(e.clientX - dragStart.current.x) +
+            Math.abs(e.clientY - dragStart.current.y);
+          if (moved > SWIPE_THRESHOLD_PX) justDragged.current = true;
+          dragStart.current = null;
+        }
+      }}
+      onClick={(e) => {
+        if (justDragged.current) {
+          justDragged.current = false;
+          return;
+        }
+        // Middle-click (autoscroll) and right-click (context menu) fall
+        // through rather than hijacking browser behavior; only primary and
+        // middle clicks navigate (both open a new tab, target=_blank style).
+        if (e.button !== 0 && e.button !== 1) return;
+        if ((e.target as HTMLElement).closest("a, button")) return;
+        openExternal();
+      }}
+      className="group flex flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/50 transition-colors hover:border-zinc-700 cursor-pointer"
+    >
       <div className="relative aspect-[4/3] overflow-hidden bg-zinc-800">
         <ImageSlider
           title={model.title}
@@ -188,27 +247,25 @@ export function ModelCard({
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h3
-              className="truncate text-sm font-medium text-zinc-100"
-              title={model.title}
+        <div className="min-w-0">
+          <h3
+            className="truncate text-sm font-medium text-zinc-100"
+            title={model.title}
+          >
+            {/* Title doubles as the keyboard-accessible target for opening
+                the model, since whole-card navigation is mouse/touch-only. */}
+            <a
+              href={model.externalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors hover:text-indigo-300 focus-visible:outline-none"
             >
               {model.title}
-            </h3>
-            <p className="mt-0.5 truncate text-xs text-zinc-400">
-              by {model.author} · {model.license}
-            </p>
-          </div>
-          <a
-            href={model.externalUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Open ${model.title} on ${badge.label}`}
-            className="shrink-0 rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
-          >
-            <ExternalLink className="size-4" />
-          </a>
+            </a>
+          </h3>
+          <p className="mt-0.5 truncate text-xs text-zinc-400">
+            by {model.author} · {model.license}
+          </p>
         </div>
 
         {model.tags.length > 0 && onTagClick && (
