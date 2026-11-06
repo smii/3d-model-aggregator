@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useT } from "@/lib/i18n/client";
 import { getNavItems } from "@/lib/nav-items";
 
 export function Sidebar({
@@ -10,12 +11,13 @@ export function Sidebar({
   hideGmailFeatures?: boolean;
 }) {
   const pathname = usePathname();
+  const t = useT();
   const navItems = getNavItems(hideGmailFeatures);
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-56 flex-col border-r border-zinc-800 bg-zinc-950 pt-14 md:flex">
       <nav className="flex flex-col gap-1 p-3">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {navItems.map(({ href, label, labelKey, icon: Icon }) => {
           const active = pathname === href;
           return (
             <Link
@@ -28,7 +30,7 @@ export function Sidebar({
               }`}
             >
               <Icon className="size-4" />
-              {label}
+              {labelKey ? t(labelKey) : label}
             </Link>
           );
         })}

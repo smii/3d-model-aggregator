@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useT } from "@/lib/i18n/client";
 import { getNavItems } from "@/lib/nav-items";
 
 export function MobileNav({
@@ -10,11 +11,12 @@ export function MobileNav({
   hideGmailFeatures?: boolean;
 }) {
   const pathname = usePathname();
+  const t = useT();
   const navItems = getNavItems(hideGmailFeatures);
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-zinc-800 bg-zinc-950 pb-[env(safe-area-inset-bottom)] md:hidden">
-      {navItems.map(({ href, label, icon: Icon }) => {
+      {navItems.map(({ href, label, labelKey, icon: Icon }) => {
         const active = pathname === href;
         return (
           <Link
@@ -25,7 +27,7 @@ export function MobileNav({
             }`}
           >
             <Icon className="size-5" />
-            {label}
+            {labelKey ? t(labelKey) : label}
           </Link>
         );
       })}

@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown, Heart, LogOut, Settings, UserCircle } from "lucide-react";
 import { signOutAction } from "@/lib/auth-actions";
+import { useT } from "@/lib/i18n/client";
 
 type MenuUser = {
   name?: string | null;
@@ -16,6 +17,7 @@ const itemClass =
   "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-zinc-100";
 
 export function UserMenu({ user }: { user: MenuUser }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -83,7 +85,7 @@ export function UserMenu({ user }: { user: MenuUser }) {
             className={itemClass}
           >
             <Heart className="size-4" />
-            Favorites
+            {t("nav.favorites")}
           </Link>
           <Link
             href="/settings"
@@ -92,13 +94,13 @@ export function UserMenu({ user }: { user: MenuUser }) {
             className={itemClass}
           >
             <Settings className="size-4" />
-            Settings
+            {t("nav.settings")}
           </Link>
           <div className="my-1 border-t border-zinc-800" />
           <form action={signOutAction}>
             <button type="submit" role="menuitem" className={itemClass}>
               <LogOut className="size-4" />
-              Sign out
+              {t("auth.signOut")}
             </button>
           </form>
         </div>

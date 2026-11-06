@@ -2,7 +2,14 @@ import { signIn } from "@/auth";
 import { signOutAction } from "@/lib/auth-actions";
 import { LogIn, LogOut } from "lucide-react";
 
-export function SignInButton({ className }: { className?: string }) {
+export function SignInButton({
+  className,
+  label = "Sign in with Google",
+}: {
+  className?: string;
+  /** Already-translated text; callers that don't pass one keep the English default. */
+  label?: string;
+}) {
   return (
     <form
       action={async () => {
@@ -18,7 +25,7 @@ export function SignInButton({ className }: { className?: string }) {
         }
       >
         <LogIn className="size-4" />
-        Sign in with Google
+        {label}
       </button>
     </form>
   );
