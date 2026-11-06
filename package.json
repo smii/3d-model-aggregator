@@ -7,6 +7,9 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "probe": "tsx scripts/probe-adapters.ts",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
@@ -39,7 +42,9 @@
     "prisma": "^7.9.0",
     "sharp": "^0.34.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "~4.0.18"
   },
   "allowScripts": {
     "better-sqlite3@12.11.1": true,
