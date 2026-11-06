@@ -9,7 +9,12 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import { categoryOptions, platformOptions } from "@/components/SidebarFilters";
+import {
+  categoryOptions,
+  platformOptions,
+  sortLabels,
+} from "@/components/SidebarFilters";
+import { DEFAULT_SORT, parseSortOption } from "@/types/model";
 
 export interface SavedSearchListItem {
   id: string;
@@ -29,17 +34,22 @@ const categoryLabels = new Map<string, string>(
 const platformLabels = new Map<string, string>(
   platformOptions.map(({ id, label }) => [id, label])
 );
-const sortLabels: Record<string, string> = {
-  newest: "Newest",
-  most_liked: "Most Liked",
-  most_downloaded: "Most Downloaded",
-};
+
+// The stored value may be the legacy "newest" (shown as Relevance) or, for a
+// hand-edited row, something unknown (shown as-is).
+function sortLabel(stored: string): string {
+  const sort = parseSortOption(stored);
+  return sort ? sortLabels[sort] : stored;
+}
 
 function searchUrl(item: SavedSearchListItem): string {
   const params = new URLSearchParams({ q: item.query });
   if (item.platforms.length > 0) params.set("platforms", item.platforms.join(","));
   if (item.category) params.set("category", item.category);
-  if (item.sort !== "newest") params.set("sort", item.sort);
+  // Rows saved before "relevance" existed store the legacy "newest", which
+  // parseSortOption maps to relevance (the default, so it stays off the URL).
+  const sort = parseSortOption(item.sort);
+  if (sort && sort !== DEFAULT_SORT) params.set("sort", sort);
   return `/?${params.toString()}`;
 }
 
@@ -180,7 +190,7 @@ export function SavedSearchesBrowser({ initialItems }: SavedSearchesBrowserProps
                 </span>
               )}
               <span className="rounded-md bg-zinc-800 px-1.5 py-0.5">
-                {sortLabels[item.sort] ?? item.sort}
+                {sortLabel(item.sort)}
               </span>
             </div>
 

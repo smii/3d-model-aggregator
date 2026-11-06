@@ -8,7 +8,12 @@ import {
   Shapes,
   SlidersHorizontal,
 } from "lucide-react";
-import type { ModelCategory, SortOption, SourcePlatform } from "@/types/model";
+import {
+  SORT_OPTIONS,
+  type ModelCategory,
+  type SortOption,
+  type SourcePlatform,
+} from "@/types/model";
 
 export const platformOptions: ReadonlyArray<{
   id: SourcePlatform;
@@ -25,11 +30,14 @@ export const platformOptions: ReadonlyArray<{
   { id: "myminifactory", label: "MyMiniFactory" },
 ];
 
-const sortOptions: ReadonlyArray<{ id: SortOption; label: string }> = [
-  { id: "newest", label: "Newest" },
-  { id: "most_liked", label: "Most Liked" },
-  { id: "most_downloaded", label: "Most Downloaded" },
-];
+export const sortLabels: Readonly<Record<SortOption, string>> = {
+  relevance: "Relevance",
+  most_liked: "Most Liked",
+  most_downloaded: "Most Downloaded",
+};
+
+const sortOptions: ReadonlyArray<{ id: SortOption; label: string }> =
+  SORT_OPTIONS.map((id) => ({ id, label: sortLabels[id] }));
 
 export const categoryOptions: ReadonlyArray<{
   id: ModelCategory;
@@ -210,6 +218,12 @@ export function SidebarFilters({
             );
           })}
         </fieldset>
+        {sort === "relevance" && (
+          <p className="mt-3 text-xs leading-relaxed text-zinc-600">
+            Each platform&apos;s own ranking, interleaved. Results carry no
+            upload date, so there is no sort by date.
+          </p>
+        )}
         {sort === "most_downloaded" && (
           <p className="mt-3 text-xs leading-relaxed text-zinc-600">
             Thingiverse and MyMiniFactory don&apos;t report download counts in
