@@ -13,6 +13,7 @@ import {
 import { SearchBar } from "@/components/SearchBar";
 import { SidebarFilters, platformOptions } from "@/components/SidebarFilters";
 import { FilterDrawer } from "@/components/FilterDrawer";
+import { HandoffLinks } from "@/components/HandoffLinks";
 import { ModelGrid } from "@/components/ModelGrid";
 import { FavoriteCategoryModal } from "@/components/FavoriteCategoryModal";
 import { ModelPreviewModal } from "@/components/ModelPreviewModal";
@@ -475,6 +476,8 @@ function SearchPage() {
           </button>
         )}
       </div>
+
+      <HandoffLinks query={query} />
 
       <div className="flex flex-col gap-6 lg:flex-row">
         <FilterDrawer>
