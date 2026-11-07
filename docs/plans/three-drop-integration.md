@@ -151,4 +151,19 @@ Phases are implemented in parallel by separate agents, each in its own git workt
 
 ## 9. Status
 
-_Filled in when the agents report back._
+All six branches are committed locally and unpushed. Each passed `tsc` and `lint`; P0 (273 tests), P1 and P2 were checked independently by the coordinator, P3, P4 and P5 were re-checked with `tsc` and `lint`.
+
+| Phase | Branch | HEAD | Outcome |
+|---|---|---|---|
+| P0 | `feat/3drop-p0-adapter-tests` | b7b3e09 | Vitest + tsx, 273 tests, `npm run probe`, shared `resultKey` and saved-search diff |
+| P1 | `feat/3drop-p1-handoff-sort` | 001a40e | Thangs/Creality hand-off links, honest Relevance sort |
+| P2 | `feat/3drop-p2-new-platforms` | a823313 | Research only: Maker Online and Nexprint are hand-off only |
+| P3 | `feat/3drop-p3-collections` | 6ac2376 | Favorite collections: schema, migration, API, UI |
+| P4 | `feat/3drop-p4-contests` | 4112965 | `/contests` with static outbound links; no legitimate live source found |
+| P5 | `feat/3drop-p5-i18n-follows` | f3869fb | Dependency-free i18n (en, es) plus follows design note |
+
+Trial merge (order P0, P1, P3, P2, P4, P5): P0-P3 merge cleanly. P4 and P5 conflict with each other in `CLAUDE.md` (adjacent one-liners) and `src/lib/nav-items.ts` (P5 adds `labelKey`, P4 adds a Contests entry); resolve by keeping both.
+
+Unverified: Creality search URL (robots.txt disallows `*/search`, never requested); live probe of keyed adapters; PostgreSQL migration run; signed-in UI paths.
+
+Follow-ups: add Maker Online / Nexprint hand-off entries after P1 merges (key type wider than `SourcePlatform`); P0 found `platforms=''` yields zero adapters, repeated platform names are not deduplicated, and `/api/saved-searches/run` is unauthenticated and unthrottled.
