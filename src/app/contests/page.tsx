@@ -173,7 +173,7 @@ export default async function ContestsPage() {
           </h2>
           <p className="mt-1 text-sm text-zinc-400">
             {hasLiveSources
-              ? "Every platform runs more contests than the live list above covers. These links open the platform's own page in a new tab."
+              ? "The live list above may not include every contest. These links open the platform's own page in a new tab."
               : "None of these platforms offers a public contest feed this app can use, so there are no live listings here. These links open the platform's own page in a new tab."}
           </p>
         </div>
