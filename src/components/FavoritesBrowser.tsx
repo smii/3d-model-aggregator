@@ -6,6 +6,8 @@ import {
   Box,
   Download,
   ExternalLink,
+  Folder,
+  FolderPlus,
   Heart,
   Search,
   Shapes,
@@ -15,8 +17,11 @@ import {
 import { platformBadges, PREVIEWABLE_PLATFORMS } from "@/components/ModelCard";
 import { categoryOptions, platformOptions } from "@/components/SidebarFilters";
 import { CategoryCombobox } from "@/components/CategoryCombobox";
+import { CollectionPickerModal } from "@/components/CollectionPickerModal";
+import { CollectionsPanel, type CollectionFilter } from "@/components/CollectionsPanel";
 import { FilterDrawer } from "@/components/FilterDrawer";
 import { ModelPreviewModal } from "@/components/ModelPreviewModal";
+import { compareCollections, type CollectionSummary } from "@/lib/collection-names";
 import { getFavoriteCategoryOptions } from "@/lib/favorite-categories";
 import { downloadTextFile, favoritesToCsv, favoritesToJson } from "@/lib/export-favorites";
 import type { SourcePlatform } from "@/types/model";
@@ -33,6 +38,9 @@ export interface FavoriteListItem {
   // A platform-native category id (src/types/model.ts) or a user-created
   // custom category string.
   category: string | null;
+  // Ids of the collections this favorite is filed in. Independent of
+  // `category`: a favorite has one category and any number of collections.
+  collectionIds: string[];
   createdAt: string;
 }
 
@@ -56,17 +64,65 @@ function badgeFor(platform: string) {
   );
 }
 
-interface FavoritesBrowserProps {
-  initialItems: ReadonlyArray<FavoriteListItem>;
+type ApiResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; status: number; message: string };
+
+// Calls the /api/collections endpoints. They answer errors with
+// { error: string } (never internals), so that message is safe to show;
+// anything else (a 500 page, a proxy error) falls back to the status code.
+async function callCollectionsApi<T = unknown>(
+  url: string,
+  method: "POST" | "PATCH" | "DELETE",
+  body: unknown,
+  fallback: string
+): Promise<ApiResult<T>> {
+  try {
+    const response = await fetch(url, {
+      method,
+      ...(body === undefined
+        ? {}
+        : {
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          }),
+    });
+    if (!response.ok) {
+      const data: unknown = await response.json().catch(() => null);
+      const message =
+        data && typeof data === "object" && "error" in data && typeof data.error === "string"
+          ? data.error
+          : `${fallback} (${response.status}).`;
+      return { ok: false, status: response.status, message };
+    }
+    return { ok: true, data: (await response.json().catch(() => null)) as T };
+  } catch {
+    return {
+      ok: false,
+      status: 0,
+      message: "Could not reach the server. Check your connection and try again.",
+    };
+  }
 }
 
-export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
+interface FavoritesBrowserProps {
+  initialItems: ReadonlyArray<FavoriteListItem>;
+  initialCollections: ReadonlyArray<CollectionSummary>;
+}
+
+export function FavoritesBrowser({ initialItems, initialCollections }: FavoritesBrowserProps) {
   const [items, setItems] = useState<ReadonlyArray<FavoriteListItem>>(initialItems);
+  const [collections, setCollections] =
+    useState<ReadonlyArray<CollectionSummary>>(initialCollections);
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
+  const [collectionFilter, setCollectionFilter] = useState<CollectionFilter>("all");
   const [selected, setSelected] = useState<ReadonlySet<string> | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [previewItem, setPreviewItem] = useState<FavoriteListItem | null>(null);
+  // The favorite whose "Add to collection" dialog is open. Held as an id so
+  // the dialog always reads the live item, including optimistic changes.
+  const [pickerItemId, setPickerItemId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortBy>("newest");
 
   const platforms = useMemo(() => {
@@ -120,6 +176,25 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
   const categoryPickerOptions = useMemo(
     () => getFavoriteCategoryOptions(items.map((item) => item.category)),
     [items]
+  );
+
+  // How many favorites each collection holds, and how many are in none.
+  const { collectionCounts, uncollectedCount } = useMemo(() => {
+    const counts = new Map<string, number>();
+    let uncollected = 0;
+    for (const item of items) {
+      if (item.collectionIds.length === 0) uncollected += 1;
+      for (const id of item.collectionIds) {
+        counts.set(id, (counts.get(id) ?? 0) + 1);
+      }
+    }
+    return { collectionCounts: counts, uncollectedCount: uncollected };
+  }, [items]);
+
+  // The favorite shown in the "Add to collection" dialog, if any.
+  const pickerItem = useMemo(
+    () => items.find((item) => item.id === pickerItemId) ?? null,
+    [items, pickerItemId]
   );
 
   // null means "no filter applied yet" — every platform selected.
@@ -183,6 +258,117 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
     }
   }
 
+  // The collection handlers below resolve to an error message for the panel
+  // or dialog that triggered them to show next to its controls (the notice
+  // banner above would sit behind the dialog), or null on success.
+
+  async function createCollection(
+    name: string
+  ): Promise<{ collection: CollectionSummary } | { error: string }> {
+    const result = await callCollectionsApi<{ collection: CollectionSummary }>(
+      "/api/collections",
+      "POST",
+      { name },
+      "Creating the collection failed"
+    );
+    if (!result.ok) return { error: result.message };
+    const collection = { id: result.data.collection.id, name: result.data.collection.name };
+    setCollections((prev) => [...prev, collection].sort(compareCollections));
+    return { collection };
+  }
+
+  async function renameCollection(
+    collection: CollectionSummary,
+    name: string
+  ): Promise<string | null> {
+    if (name === collection.name) return null;
+    const result = await callCollectionsApi<{ collection: CollectionSummary }>(
+      `/api/collections/${encodeURIComponent(collection.id)}`,
+      "PATCH",
+      { name },
+      "Renaming the collection failed"
+    );
+    if (!result.ok) return result.message;
+    const renamed = result.data.collection.name;
+    setCollections((prev) =>
+      prev
+        .map((c) => (c.id === collection.id ? { ...c, name: renamed } : c))
+        .sort(compareCollections)
+    );
+    return null;
+  }
+
+  async function deleteCollection(collection: CollectionSummary): Promise<string | null> {
+    const result = await callCollectionsApi(
+      `/api/collections/${encodeURIComponent(collection.id)}`,
+      "DELETE",
+      undefined,
+      "Deleting the collection failed"
+    );
+    // 404 means it was already deleted elsewhere — the end state the user asked for.
+    if (!result.ok && result.status !== 404) return result.message;
+    setCollections((prev) => prev.filter((c) => c.id !== collection.id));
+    setItems((prev) =>
+      prev.map((f) =>
+        f.collectionIds.includes(collection.id)
+          ? { ...f, collectionIds: f.collectionIds.filter((id) => id !== collection.id) }
+          : f
+      )
+    );
+    setCollectionFilter((prev) => (prev === collection.id ? "all" : prev));
+    return null;
+  }
+
+  // Optimistic like changeCategory: the checkbox flips at once and is put
+  // back if the server refuses.
+  async function setMembership(
+    item: FavoriteListItem,
+    collection: CollectionSummary,
+    member: boolean
+  ): Promise<string | null> {
+    const apply = (filed: boolean) =>
+      setItems((prev) =>
+        prev.map((f) => {
+          if (f.id !== item.id) return f;
+          const others = f.collectionIds.filter((id) => id !== collection.id);
+          return { ...f, collectionIds: filed ? [...others, collection.id] : others };
+        })
+      );
+    apply(member);
+
+    const base = `/api/collections/${encodeURIComponent(collection.id)}/items`;
+    const result = member
+      ? await callCollectionsApi(
+          base,
+          "POST",
+          { favoriteId: item.id },
+          "Adding to the collection failed"
+        )
+      : await callCollectionsApi(
+          `${base}?favoriteId=${encodeURIComponent(item.id)}`,
+          "DELETE",
+          undefined,
+          "Removing from the collection failed"
+        );
+    // A 404 on removal means it is already out of the collection.
+    if (result.ok || (!member && result.status === 404)) return null;
+    apply(!member);
+    return result.message;
+  }
+
+  // "New collection" in the dialog: create it, then file the favorite in it.
+  async function createCollectionFor(
+    item: FavoriteListItem,
+    name: string
+  ): Promise<string | null> {
+    const created = await createCollection(name);
+    if ("error" in created) return created.error;
+    const failure = await setMembership(item, created.collection, true);
+    return failure
+      ? `Created "${created.collection.name}", but this favorite wasn't added: ${failure}`
+      : null;
+  }
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const matches = items.filter((item) => {
@@ -192,6 +378,15 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
         categoryFilter !== "all" &&
         categoryFilter !== "uncategorized" &&
         item.category !== categoryFilter
+      ) {
+        return false;
+      }
+      // Combines with the category filter above: both have to match.
+      if (collectionFilter === "none" && item.collectionIds.length > 0) return false;
+      if (
+        collectionFilter !== "all" &&
+        collectionFilter !== "none" &&
+        !item.collectionIds.includes(collectionFilter)
       ) {
         return false;
       }
@@ -218,7 +413,7 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
         sorted.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     }
     return sorted;
-  }, [items, query, selectedPlatforms, categoryFilter, sortBy]);
+  }, [items, query, selectedPlatforms, categoryFilter, collectionFilter, sortBy]);
 
   if (items.length === 0) {
     return (
@@ -226,7 +421,7 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
         <Heart className="size-10 text-zinc-600" />
         <p className="max-w-md text-sm text-zinc-500">
           No favorites yet. Hit the heart on any search result to save it here,
-          organized by category.
+          organized by category and collection.
         </p>
       </div>
     );
@@ -259,7 +454,7 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
             onClick={() =>
               downloadTextFile(
                 "favorites.json",
-                favoritesToJson(filtered),
+                favoritesToJson(filtered, collections),
                 "application/json"
               )
             }
@@ -273,7 +468,7 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
             onClick={() =>
               downloadTextFile(
                 "favorites.csv",
-                favoritesToCsv(filtered),
+                favoritesToCsv(filtered, collections),
                 "text/csv"
               )
             }
@@ -312,6 +507,21 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
               ))}
             </fieldset>
           </section>
+
+          <CollectionsPanel
+            collections={collections}
+            counts={collectionCounts}
+            totalCount={items.length}
+            uncollectedCount={uncollectedCount}
+            filter={collectionFilter}
+            onFilterChange={setCollectionFilter}
+            onCreate={async (name) => {
+              const created = await createCollection(name);
+              return "error" in created ? created.error : null;
+            }}
+            onRename={renameCollection}
+            onDelete={deleteCollection}
+          />
 
           <section className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
             <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
@@ -389,7 +599,12 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
                 key={item.id}
                 item={item}
                 categoryOptions={categoryPickerOptions}
+                // `collections` is already sorted by name.
+                collectionNames={collections
+                  .filter((collection) => item.collectionIds.includes(collection.id))
+                  .map((collection) => collection.name)}
                 onChangeCategory={changeCategory}
+                onOpenCollections={(favorite) => setPickerItemId(favorite.id)}
                 onRemove={removeFavorite}
                 onPreview={setPreviewItem}
               />
@@ -405,6 +620,17 @@ export function FavoritesBrowser({ initialItems }: FavoritesBrowserProps) {
         externalId={previewItem?.externalId ?? null}
         onClose={() => setPreviewItem(null)}
       />
+
+      {pickerItem && (
+        <CollectionPickerModal
+          favoriteTitle={pickerItem.title}
+          collections={collections}
+          memberIds={pickerItem.collectionIds}
+          onToggle={(collection, member) => setMembership(pickerItem, collection, member)}
+          onCreate={(name) => createCollectionFor(pickerItem, name)}
+          onClose={() => setPickerItemId(null)}
+        />
+      )}
     </div>
   );
 }
@@ -442,18 +668,24 @@ function CategoryRadio({
 function FavoriteCard({
   item,
   categoryOptions: pickerOptions,
+  collectionNames,
   onChangeCategory,
+  onOpenCollections,
   onRemove,
   onPreview,
 }: {
   item: FavoriteListItem;
   categoryOptions: ReadonlyArray<{ value: string; label: string }>;
+  // Names of the collections the favorite is in.
+  collectionNames: ReadonlyArray<string>;
   onChangeCategory: (item: FavoriteListItem, next: string | null) => void;
+  onOpenCollections: (item: FavoriteListItem) => void;
   onRemove: (item: FavoriteListItem) => void;
   onPreview: (item: FavoriteListItem) => void;
 }) {
   const badge = badgeFor(item.sourcePlatform);
   const previewable = PREVIEWABLE_PLATFORMS.has(item.sourcePlatform as SourcePlatform);
+  const collectionSummary = collectionNames.join(", ");
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/50 transition-colors hover:border-zinc-700">
@@ -530,6 +762,32 @@ function FavoriteCard({
           onChange={(next) => onChangeCategory(item, next)}
           ariaLabel={`Category for ${item.title}`}
         />
+
+        <button
+          type="button"
+          onClick={() => onOpenCollections(item)}
+          aria-haspopup="dialog"
+          aria-label={
+            collectionNames.length > 0
+              ? `Collections for ${item.title}: ${collectionSummary}. Change collections`
+              : `Add ${item.title} to a collection`
+          }
+          title={collectionSummary || undefined}
+          className="flex w-full items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1.5 text-left text-xs text-zinc-300 transition-colors hover:border-zinc-700 hover:text-zinc-100 focus:border-indigo-500 focus:outline-none"
+        >
+          {collectionNames.length > 0 ? (
+            <Folder className="size-3.5 shrink-0 text-indigo-400" />
+          ) : (
+            <FolderPlus className="size-3.5 shrink-0 text-zinc-500" />
+          )}
+          <span
+            className={`min-w-0 flex-1 truncate ${
+              collectionNames.length > 0 ? "" : "text-zinc-500"
+            }`}
+          >
+            {collectionNames.length > 0 ? collectionSummary : "Add to collection"}
+          </span>
+        </button>
       </div>
     </article>
   );

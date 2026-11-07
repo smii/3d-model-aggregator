@@ -125,8 +125,43 @@ model FavoriteModel {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  collections FavoriteCollectionItem[]
+
   @@unique([sourcePlatform, externalId])
   @@index([category])
+}
+
+// A named list favorites can be filed into (per project, material, printer...).
+// Additive to FavoriteModel.category: a favorite keeps its single category and
+// can also sit in any number of collections (many-to-many through
+// FavoriteCollectionItem). Same convention as FavoriteModel: deliberately not
+// tied to a user, collections are installation-wide.
+model FavoriteCollection {
+  id        String   @id @default(cuid())
+  // Trimmed, 1-60 chars (src/lib/collection-names.ts). Uniqueness is meant to
+  // be case-insensitive, which a plain unique index is not on SQLite or
+  // PostgreSQL, so the API checks it in code; this index only backstops exact
+  // duplicates from racing requests.
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items FavoriteCollectionItem[]
+}
+
+// Membership row. Cascades from both sides: deleting a collection drops only
+// its memberships and deleting a favorite drops only its memberships -- the
+// other side of the relation is never deleted.
+model FavoriteCollectionItem {
+  collectionId String
+  favoriteId   String
+  createdAt    DateTime @default(now())
+
+  collection FavoriteCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  favorite   FavoriteModel      @relation(fields: [favoriteId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, favoriteId])
+  @@index([favoriteId])
 }
 
 // A persisted query+filters combo, periodically re-run by a background job

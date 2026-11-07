@@ -6,6 +6,7 @@ import {
   FavoritesBrowser,
   type FavoriteListItem,
 } from "@/components/FavoritesBrowser";
+import { compareCollections } from "@/lib/collection-names";
 import { HIDE_GMAIL_FEATURES } from "@/lib/config";
 
 export const metadata: Metadata = {
@@ -15,9 +16,13 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function FavoritesPage() {
-  const favorites = await prisma.favoriteModel.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+  const [favorites, collections] = await Promise.all([
+    prisma.favoriteModel.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { collections: { select: { collectionId: true } } },
+    }),
+    prisma.favoriteCollection.findMany({ select: { id: true, name: true } }),
+  ]);
 
   const items: FavoriteListItem[] = favorites.map((favorite) => ({
     id: favorite.id,
@@ -29,15 +34,21 @@ export default async function FavoritesPage() {
     sourcePlatform: favorite.sourcePlatform,
     likesCount: favorite.likesCount,
     category: favorite.category,
+    collectionIds: favorite.collections.map((membership) => membership.collectionId),
     createdAt: favorite.createdAt.toISOString(),
   }));
+
+  // Alphabetical, like the /api/collections list: the database orders text by
+  // byte value, so this is sorted in code.
+  const collectionList = collections.sort(compareCollections);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Favorites</h1>
         <p className="mt-1 text-sm text-zinc-400">
-          Models you saved from search results, organized by category.
+          Models you saved from search results, organized by category and
+          collection.
         </p>
       </div>
 
@@ -54,7 +65,7 @@ export default async function FavoritesPage() {
         </Link>
       )}
 
-      <FavoritesBrowser initialItems={items} />
+      <FavoritesBrowser initialItems={items} initialCollections={collectionList} />
     </div>
   );
 }
