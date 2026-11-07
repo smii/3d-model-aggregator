@@ -32,7 +32,12 @@ export function LanguageSwitcher() {
           if (!isLocale(next)) return;
           startTransition(async () => {
             setShownLocale(next);
-            await setLocaleAction(next);
+            try {
+              await setLocaleAction(next);
+            } catch {
+              // Offline or server unreachable: keep the current language. The
+              // optimistic value reverts when this transition ends.
+            }
           });
         }}
         className="absolute inset-0 size-full cursor-pointer opacity-0 [color-scheme:dark]"
