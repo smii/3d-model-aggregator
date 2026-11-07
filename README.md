@@ -20,7 +20,7 @@ Built with Next.js 15, TypeScript, Tailwind CSS, and Prisma (SQLite in dev).
 
 ## Features
 
-- **Search** Printables, Thingiverse, MakerWorld, GrabCAD, Cults3D, and MyMiniFactory at once — filter by platform, category, license, tags, or free-only, and sort by newest/most liked/most downloaded.
+- **Search** Printables, Thingiverse, MakerWorld, GrabCAD, Cults3D, and MyMiniFactory at once — filter by platform, category, license, tags, or free-only, and sort by relevance/most liked/most downloaded (results carry no upload date, so there is no date sort). Thangs and Creality Cloud block automated search, so a query also shows "Also search on" links that open their own search page in a new tab.
 - **Deduplication & merge**, on by default — reposts of the same model across platforms are combined into one card (gallery, tags, per-platform links); see above, toggleable off.
 - **Swipeable image galleries** on cards where a platform actually returns more than one photo (Printables, Cults3D, MyMiniFactory) — click arrows on desktop, swipe on mobile.
 - **Favorites**, organized by category, sortable, exportable.
