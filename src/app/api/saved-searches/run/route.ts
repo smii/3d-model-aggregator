@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { resolveSearchAdapters, searchAllPlatforms } from '@/lib/aggregator';
-import { isModelCategory, type UnifiedModelResult } from '@/types/model';
+import { diffSavedSearchResults } from '@/lib/saved-searches/diff';
+import { isModelCategory } from '@/types/model';
 
 // Re-runs saved searches and flags results that weren't there last time.
 // Hit periodically by a K8s CronJob (POST with no body -- see
@@ -9,12 +10,6 @@ import { isModelCategory, type UnifiedModelResult } from '@/types/model';
 // saved search, or on-demand with ?id=<id> for the "Run now" button. Local,
 // unauthenticated, same convention as the rest of this app's install-wide
 // data -- nothing here is user-specific.
-
-const MAX_TRACKED_KEYS = 200;
-
-function resultKey(result: UnifiedModelResult): string {
-  return `${result.sourcePlatform}:${result.id}`;
-}
 
 async function runOne(search: {
   id: string;
@@ -41,21 +36,14 @@ async function runOne(search: {
       { query: search.query, page: 1, category },
       adapters,
     );
-    const currentKeys = results.map(resultKey);
-    const previousKeys = new Set(
-      search.lastSeenIds.split(',').filter(Boolean),
-    );
-
     // A first-ever run just establishes the baseline -- nothing "new" yet.
-    const newCount = search.lastRunAt
-      ? currentKeys.filter((key) => !previousKeys.has(key)).length
-      : 0;
+    const { newCount, lastSeenIds } = diffSavedSearchResults(results, search);
 
     await prisma.savedSearch.update({
       where: { id: search.id },
       data: {
         lastRunAt: new Date(),
-        lastSeenIds: currentKeys.slice(0, MAX_TRACKED_KEYS).join(','),
+        lastSeenIds,
         newResultsCount: { increment: newCount },
         lastError: failures.length > 0
           ? `${failures.length} platform(s) failed: ${failures.map((f) => f.platform).join(', ')}`

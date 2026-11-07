@@ -5,6 +5,7 @@ import { grabcadAdapter } from './grabcad';
 import { makerworldAdapter } from './makerworld';
 import { myminifactoryAdapter } from './myminifactory';
 import { printablesAdapter } from './printables';
+import { resultKey } from './result-key';
 import { thingiverseAdapter } from './thingiverse';
 import type {
   AdapterFailure,
@@ -73,10 +74,6 @@ export function resolveSearchAdapters(options: {
   }
 
   return { adapters, skipped };
-}
-
-function resultKey(result: UnifiedModelResult): string {
-  return `${result.sourcePlatform}:${result.id}`;
 }
 
 /**
