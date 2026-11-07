@@ -20,7 +20,7 @@ export function MobileNav({
           <Link
             key={href}
             href={href}
-            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition-colors ${
+            className={`flex flex-1 flex-col items-center justify-start gap-0.5 py-2 text-center text-[11px] font-medium transition-colors ${
               active ? "text-zinc-50" : "text-zinc-400 hover:text-zinc-100"
             }`}
           >
