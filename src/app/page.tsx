@@ -13,6 +13,7 @@ import {
 import { SearchBar } from "@/components/SearchBar";
 import { SidebarFilters, platformOptions } from "@/components/SidebarFilters";
 import { FilterDrawer } from "@/components/FilterDrawer";
+import { HandoffLinks } from "@/components/HandoffLinks";
 import { ModelGrid } from "@/components/ModelGrid";
 import { FavoriteCategoryModal } from "@/components/FavoriteCategoryModal";
 import { ModelPreviewModal } from "@/components/ModelPreviewModal";
@@ -20,7 +21,9 @@ import { SaveSearchModal } from "@/components/SaveSearchModal";
 import { getFavoriteCategoryOptions } from "@/lib/favorite-categories";
 import { mergeDuplicateGroups } from "@/lib/duplicate-groups";
 import {
+  DEFAULT_SORT,
   isModelCategory,
+  parseSortOption,
   type ModelCategory,
   type SortOption,
   type SourcePlatform,
@@ -59,7 +62,7 @@ function SearchPage() {
     () =>
       new Set(platformOptions.filter((p) => !p.unavailable).map((p) => p.id))
   );
-  const [sort, setSort] = useState<SortOption>("newest");
+  const [sort, setSort] = useState<SortOption>(DEFAULT_SORT);
   const [freeOnly, setFreeOnly] = useState(false);
   const [selectedLicense, setSelectedLicense] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<ReadonlySet<string>>(new Set());
@@ -142,8 +145,10 @@ function SearchPage() {
     if (urlCategory && isModelCategory(urlCategory)) {
       setCategory(urlCategory);
     }
-    if (urlSort === "most_liked" || urlSort === "most_downloaded" || urlSort === "newest") {
-      setSort(urlSort);
+    // Also maps the legacy "newest" (old saved-search links) to relevance.
+    const parsedSort = urlSort ? parseSortOption(urlSort) : null;
+    if (parsedSort) {
+      setSort(parsedSort);
     }
 
     (async () => {
@@ -429,6 +434,7 @@ function SearchPage() {
     if (sort === "most_downloaded") {
       return [...filtered].sort((a, b) => b.downloadsCount - a.downloadsCount);
     }
+    // relevance: keep the aggregator's interleaved platform order as-is.
     return filtered;
   }, [
     search,
@@ -475,6 +481,8 @@ function SearchPage() {
           </button>
         )}
       </div>
+
+      <HandoffLinks query={query} />
 
       <div className="flex flex-col gap-6 lg:flex-row">
         <FilterDrawer>

@@ -8,7 +8,31 @@ export type SourcePlatform =
   | 'grabcad'
   | 'myminifactory';
 
-export type SortOption = 'newest' | 'most_liked' | 'most_downloaded';
+/**
+ * The one list of allowed result sorts -- validate and derive from it, never
+ * redeclare it. `relevance` keeps the order the aggregator returns (each
+ * platform's own ranking, interleaved; see mergeResults in
+ * src/lib/aggregator/index.ts); the other two re-sort client-side. There is
+ * deliberately no date sort: results carry no creation date.
+ */
+export const SORT_OPTIONS = ['relevance', 'most_liked', 'most_downloaded'] as const;
+
+export type SortOption = (typeof SORT_OPTIONS)[number];
+
+export const DEFAULT_SORT: SortOption = 'relevance';
+
+/**
+ * Parses a sort from a URL param, request body or database row, or returns
+ * null if it is unknown. "newest" is accepted as a legacy alias for
+ * `relevance`: it was the old default's label but never sorted by date, and
+ * saved searches still store it (SavedSearch.sort defaults to "newest").
+ */
+export function parseSortOption(value: string): SortOption | null {
+  if ((SORT_OPTIONS as readonly string[]).includes(value)) {
+    return value as SortOption;
+  }
+  return value === 'newest' ? 'relevance' : null;
+}
 
 export const MODEL_CATEGORIES = [
   'toys_games',

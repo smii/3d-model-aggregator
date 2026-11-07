@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { isModelCategory } from '@/types/model';
+import { DEFAULT_SORT, isModelCategory, parseSortOption, type SortOption } from '@/types/model';
 import { MAX_CATEGORY_LENGTH } from '@/lib/category-constants';
 
 // Local, installation-wide saved searches — deliberately unauthenticated,
@@ -82,10 +82,16 @@ export async function POST(request: Request) {
     ? body.platforms.filter((p: unknown): p is string => typeof p === 'string')
     : [];
 
-  const sort =
-    typeof body.sort === 'string' && ['newest', 'most_liked', 'most_downloaded'].includes(body.sort)
-      ? body.sort
-      : 'newest';
+  // "newest" (the legacy default) is accepted as an alias and stored as
+  // "relevance"; anything else unknown is rejected rather than silently coerced.
+  let sort: SortOption = DEFAULT_SORT;
+  if (body.sort !== null && body.sort !== undefined) {
+    const parsed = typeof body.sort === 'string' ? parseSortOption(body.sort) : null;
+    if (!parsed) {
+      return NextResponse.json({ error: 'Unknown sort.' }, { status: 400 });
+    }
+    sort = parsed;
+  }
 
   const search = await prisma.savedSearch.create({
     data: {
